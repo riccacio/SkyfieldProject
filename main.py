@@ -1,3 +1,33 @@
+
+from satellite_tracker import SatelliteTracker
+from graph import SatelliteGraph
+from visualization import SatelliteVisualization
+from data_handler import save_graph_to_csv
+import matplotlib as plt
+
+# Step 1: Traccia i satelliti
+tracker = SatelliteTracker()
+satellites = tracker.filter_satellites()
+
+# Step 2: Costruisci il grafo
+sat_graph = SatelliteGraph()
+sat_graph.add_nodes(satellites)
+sat_graph.connect_nodes()
+
+# Step 3: Salva il grafo
+save_graph_to_csv(sat_graph.get_graph())
+
+# Step 4: Visualizza la rete
+viz = SatelliteVisualization(sat_graph.get_graph())
+viz.draw_map()
+viz.plot_nodes()
+viz.plot_edges()
+viz.add_cities()
+viz.show(save_as_png=True)
+
+
+"""
+
 from skyfield.api import load, Topos
 import networkx as nx
 import matplotlib
@@ -36,7 +66,7 @@ end_time = start_time + timedelta(minutes=1)  # Periodo di 1 minuto
 
 # Definizione limiti geografici
 min_lat, max_lat = 30, 60  # Limiti latitudine
-min_lon, max_lon = 120, 250  # Limiti longitudine -110°W = 250
+min_lon, max_lon = 130, 250  # Limiti longitudine -110°W = 250
 
 # Liste per tracciare i satelliti validi
 satellite_validated = []
@@ -124,13 +154,16 @@ for city in cities:
     m.plot(x, y, marker='o', color=city['color'], markersize=6, label=city['name'])
 
 """
+"""
 # Traccia le traiettorie dei satelliti
-for sat in satellite_tracks:
+for sat in satellite_validated:
     track = sat['track']
     lats, lons, alt = zip(*track)  # Separare latitudine e longitudine
     x, y = m(lons, lats)  # Converti le coordinate in coordinate della mappa
     m.plot(x, y, linewidth=1)  # Disegna la traiettoria
 """
+"""
+
 # Aggiungi il punto medio della traiettoria per ogni satellite
 
 sat_data = []
@@ -186,7 +219,6 @@ for i in range(len(satellite_validated_data)):
             m.plot([sat1['x'], sat2['x']], [sat1['y'], sat2['y']], color='red', linewidth=0.3)  # traccia la linea
 
 # Collega tutti i satelliti vicini al primo
-"""
 sat1 = satellite_validated_data[0]
 conta = 0
 for j in range(1, len(satellite_validated_data)):  # Evita confronti duplicati
@@ -200,18 +232,18 @@ for j in range(1, len(satellite_validated_data)):  # Evita confronti duplicati
         m.plot([sat1['x'], sat2['x']], [sat1['y'], sat2['y']], color='red', linewidth=0.5)
 
 print(f"Numero satelliti collegati: {conta}")
-"""
 
+"""
+""" 
 # TRAITETTORIE per un minuto ogni 1 secondo
 print(
     f"Satelliti presenti nel range:\nlat: {min_lat}°N:{max_lat}°N\nlong: {min_lon}°E:{(max_lon - 360) * -1}°W\nNumero satelliti: {len(satellite_validated)}")
-"""
 print("\nTraiettorie dei satelliti:")
 for sat in satellite_validated:
     print(f"Satellite: {sat['name']}")
     lats, lons, alt = zip(*sat['track'])  # Separare latitudine e longitudine
     #print(f"  Traccia: {sat['track']}")
-
+"""
 """
 
 print(f"Nodi nel grafo: {G.number_of_nodes()}")
@@ -234,6 +266,8 @@ with open("edges.csv", mode="w", newline="") as file:
 plt.title("Tracce dei satelliti che restano nel range per 1 minuto (intervallo di 1 secondo)", fontsize=16)
 plt.legend(loc='lower right', fontsize=10)
 plt.show()
+
+"""
 
 """
 SATELLITI COMPRESI NEL RANGE DI LONG E LAT PER UN PERIODO DI 1 MIN CON UN INTERVALLI DI 1 SECOND0
