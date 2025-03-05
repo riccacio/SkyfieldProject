@@ -2,7 +2,6 @@ import csv
 import matplotlib.pyplot as plt
 
 def save_graph_to_csv(graph):
-    """Salva nodi e archi del grafo in CSV."""
     with open("nodes.csv", mode="w", newline="") as file:
         writer = csv.writer(file)
         writer.writerow(["Satellite", "Latitudine", "Longitudine"])
@@ -16,6 +15,5 @@ def save_graph_to_csv(graph):
             writer.writerow([u, v, data["weight"]])
 
 def save_map_as_png(filename="map.png"):
-    """Salva la mappa in un file PNG."""
-    plt.savefig(filename, dpi=300, bbox_inches='tight')
+    plt.savefig(filename, dpi=600, bbox_inches='tight')
     print(f"Mappa salvata come {filename}")
