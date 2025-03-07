@@ -1,7 +1,8 @@
 from skyfield.api import load, Topos
 from datetime import timedelta
+import numpy as np #DA TOGLIERE E METTERE IN UTILS.PY
 
-from utils import haversine_with_altitude as haversine
+from utils import haversine_with_altitude as haversine, euclidean_distance
 
 
 class SatelliteTracker:
@@ -20,8 +21,13 @@ class SatelliteTracker:
 
 
     def filter_satellites(self):
-       #filtra i satelliti che rientrano nel range specificato
-        avg = 0
+        """
+        Filtra i satelliti che rientrano nel range specificato e, per ciascuno,
+        calcola la traccia (track) e ne stima:
+          - la posizione media (usata per calcolare l'angolo),
+          - il RAAN (in gradi) come identificativo dell'orbita,
+          - l'angolo nel piano equatoriale.
+        """
         for sat in self.satellites:
             track = []
             current_time = self.start_time
@@ -29,41 +35,70 @@ class SatelliteTracker:
 
             while current_time.utc_datetime() <= self.end_time.utc_datetime() and is_within_range:
                 subpoint = sat.at(current_time).subpoint()
-                # estrazione dei dati di latitudine, longitudine e altitudine di ogni satellite
+                # Estrazione di latitudine, longitudine e altitudine
                 sat_lat = subpoint.latitude.degrees
                 sat_lon = subpoint.longitude.degrees
                 sat_alt = subpoint.elevation.km
 
-                # gestione longitudine negativa
+                # Gestione della longitudine negativa
                 if sat_lon <= 0:
                     sat_lon += 360
 
-                # controllo posizione e altitudine (550km)
-                if not ((self.min_lat <= sat_lat <= self.max_lat) and (
-                        self.min_lon <= sat_lon <= self.max_lon)) or not (530 <= sat_alt <= 570):
+                # Controllo che la posizione e l'altitudine siano nel range desiderato (altitudine fino a ~570 km)
+                if not ((self.min_lat <= sat_lat <= self.max_lat) and (self.min_lon <= sat_lon <= self.max_lon)) or not (0 <= sat_alt <= 570):
                     is_within_range = False
 
-                # se resta dentro il range aggiungi alla lista track
                 if is_within_range:
                     track.append((sat_lat, sat_lon, sat_alt))
 
-                current_time = current_time + timedelta(seconds=1) # incremento di 1 secondo
+                current_time += timedelta(seconds=1)
 
             if is_within_range and len(track) > 2:
-                avg += track[-1][2]
-                self.satellite_validated.append({'name': sat.name, 'track': track})
+                # Calcolo della posizione media (si usa la media tra il primo e l'ultimo punto, semplificando)
+                mid_lat = (track[0][0] + track[-1][0]) / 2
+                mid_lon = (track[0][1] + track[-1][1]) / 2
+                mid_alt = (track[0][2] + track[-1][2]) / 2
+
+                #TODO OPERAZIONI DA TOGLIERE E METTERE IN UTILS.PY
+
+
+                # Calcolo dell'angolo: si proietta la posizione media nel piano equatoriale.
+                lat_rad = np.radians(mid_lat)
+                lon_rad = np.radians(mid_lon)
+                x = np.cos(lat_rad) * np.cos(lon_rad)
+                y = np.cos(lat_rad) * np.sin(lon_rad)
+                angle = np.degrees(np.arctan2(y, x))
+                if angle < 0:
+                    angle += 360
+
+                # Estrae il RAAN (Right Ascension of the Ascending Node) dal TLE e lo converte in gradi
+                try:
+                    orbit = np.degrees(sat.model.nodeo)
+                    if orbit < 0:
+                        orbit += 360
+                except Exception:
+                    orbit = None
+
+                self.satellite_validated.append({
+                    'name': sat.name,
+                    'track': track,
+                    'orbit': orbit,
+                    'angle': angle
+                })
+                print(f"Satellite {sat.name}: orbita={orbit}, angolo={angle:.2f}°")
 
         return self.satellite_validated
 
-
     def find_satellite_more_close(self, city_lan, city_lon, satellites):
-        min_distance = 1000000
+        min_distance = 1e6
+        node = None
         for sat in satellites:
             mid_lat = (sat['track'][0][0] + sat['track'][-1][0]) / 2
             mid_lon = (sat['track'][0][1] + sat['track'][-1][1]) / 2
-            distance = haversine(city_lan, city_lon, 0, mid_lat, mid_lon, 0)
+            mid_alt = (sat['track'][0][2] + sat['track'][-1][2]) / 2
+            distance = euclidean_distance(city_lan, city_lon, 0, mid_lat, mid_lon, mid_alt)
             if distance < min_distance:
-                node = sat['name'], mid_lat, mid_lon
+                node = (sat['name'], mid_lat, mid_lon)
                 min_distance = distance
 
         return node

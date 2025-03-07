@@ -22,7 +22,7 @@ class SatelliteVisualization:
 
         self.m = Basemap(projection='merc',
                          llcrnrlat=10, urcrnrlat=65,
-                         llcrnrlon=110, urcrnrlon=260,
+                         llcrnrlon=120, urcrnrlon=260,
                          resolution='i')
 
 
@@ -65,17 +65,26 @@ class SatelliteVisualization:
             x, y = self.m(lons, lats)  # converto le coordinate in coordinate della mappa
             self.m.plot(x, y, linewidth=1)
 
-    def plot_nodes(self):
+    def plot_nodes(self, path=None):
+        plotted_node_first = False
         for node, data in self.graph.nodes(data=True):
             x, y = self.m(data['lon'], data['lat'])
+
             if node == self.start[0]:
-                self.m.plot(x, y, marker='o', color='orangered', markersize=4, label='Source')
+                self.m.plot(x, y, marker='o', color='purple', markersize=6, label='Source')
             elif node == self.end[0]:
-                self.m.plot(x, y, marker='o', color='maroon', markersize=4, label='Destination')
+                self.m.plot(x, y, marker='o', color='red', markersize=6, label='Destination')
+            elif path and node in path:
+                if not plotted_node_first:
+                    self.m.plot(x, y, marker='o', color='black', markersize=6, label='Satellites in shortest path')
+                    plotted_node_first = True
+                else:
+                    self.m.plot(x, y, marker='o', color='black', markersize=6)
             else:
                 self.m.plot(x, y, marker='o', color='blue', markersize=4)
 
-    def plot_edges(self, path=None):
+    def plot_edges(self, path=None, path_label="Shortest path"):
+        plotted_path_first = False
         for u, v, data in self.graph.edges(data=True):
             node1 = self.graph.nodes[u]
             node2 = self.graph.nodes[v]
@@ -83,7 +92,11 @@ class SatelliteVisualization:
             x2, y2 = self.m(node2['lon'], node2['lat'])
 
             if path and ((u in path and v in path and path.index(u) + 1 == path.index(v)) or (v in path and u in path and path.index(v) + 1 == path.index(u))):
-                self.m.plot([x1, x2], [y1, y2], color='green', linewidth=3)
+                if not plotted_path_first:
+                    self.m.plot([x1, x2], [y1, y2], color='cyan', linewidth=3, label=path_label)
+                    plotted_path_first = True
+                else:
+                    self.m.plot([x1, x2], [y1, y2], color='cyan', linewidth=3)
             else:
                 self.m.plot([x1, x2], [y1, y2], color='red', linewidth=0.1)
 

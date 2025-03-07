@@ -14,13 +14,14 @@ print(f"Satelliti validi dentro il range: {len(satellites)}")
 
 start_node = tracker.find_satellite_more_close(city1.latitude.degrees , city1.longitude.degrees, satellites)
 end_node = tracker.find_satellite_more_close(city2.latitude.degrees , city2.longitude.degrees, satellites)
+print(f"Satellite più vicino a Vancouver: {start_node[0]}"
+      f"\nSatellite più vicino a Tokyo: {end_node[0]}")
 
 sat_graph = SatelliteGraph()
 sat_graph.add_nodes(satellites)
 sat_graph.connect_nodes()
 print(f"Numero di nodi: {sat_graph.get_graph().number_of_nodes()}"
       f"\nNumero di archi: {sat_graph.get_graph().number_of_edges()}")
-
 save_graph_to_csv(sat_graph.get_graph())
 
 # Calcola il cammino minimo tra i due satelliti più vicini alle città
@@ -28,10 +29,15 @@ shortest_path = sat_graph.find_shortest_path(start_node[0], end_node[0])
 if shortest_path:
     print("Il percorso più breve è:", shortest_path)
 
+latency = 0#sat_graph.calculate_total_latency(shortest_path)
+print(f"Latenza (RTT/2 , one-way): {latency*1000} ms")
+print(f"Latenza (RTT , two-way): {(latency*2)*1000} ms")
+
+
 viz = SatelliteVisualization(city1, city2, sat_graph.get_graph(), satellites, start_node, end_node)
 viz.draw_map()
 #viz.plot_tracks() # disegna òa traccia del satellite
 viz.add_cities()
 viz.plot_edges(shortest_path)
-viz.plot_nodes()
+viz.plot_nodes(shortest_path)
 viz.show(save_as_png=False)
