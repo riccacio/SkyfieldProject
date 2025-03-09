@@ -51,6 +51,7 @@ class SatelliteVisualization:
     def draw_map(self):
         self.m.drawcoastlines()
         self.m.drawcountries()
+        self.m.fillcontinents(color='lightgray')
 
         parallels = range(-20, 71, 10)  # intervallo ogni 10 gradi
         self.m.drawparallels(parallels, labels=[True, False, False, False], color='lightgray', linewidth=0.5)

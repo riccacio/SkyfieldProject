@@ -1,6 +1,4 @@
 import numpy as np
-
-
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371  # Raggio medio della Terra in km
     lat1, lon1, lat2, lon2 = map(np.radians, [lat1, lon1, lat2, lon2])
@@ -13,8 +11,6 @@ def haversine(lat1, lon1, lat2, lon2):
     distance = R * c
 
     return distance
-
-
 def haversine_with_altitude(lat1, lon1, alt1, lat2, lon2, alt2):
     R = 6371  # Raggio medio della Terra in km
     lat1, lon1, lat2, lon2 = map(np.radians, [lat1, lon1, lat2, lon2])
@@ -30,11 +26,6 @@ def haversine_with_altitude(lat1, lon1, alt1, lat2, lon2, alt2):
     total_distance = np.sqrt(distance**2 + dalt**2)
 
     return total_distance
-
-
-import numpy as np
-
-
 def euclidean_distance(lat1, lon1, alt1, lat2, lon2, alt2):
     R = 6378.137 # Raggio medio della Terra in km
 
@@ -66,7 +57,10 @@ def latency_calculation(distance):
     return distance / c
 
 # calcolo throughput
-# per calcolare il throughput devo utilizzare la capacità del canale, usando il teoteore di Shannon
-# C = B * log2(1 + S/N)
-def throughput(bandwidth, snr):
-    return bandwidth * np.log2(1 + snr)
+# per calcolare il throughput devo utilizzare la capacità del canale, usando il teorema di Shannon
+
+def calculate_capacity(P_t, G_t, G_r, lambda_, d, B, N):
+    P_r = P_t * G_t * G_r * (lambda_ / (4 * np.pi * d))**2  # Potenza ricevuta
+    SNR = P_r / N  # Rapporto segnale-rumore
+    C = B * np.log2(1 + SNR)  # Formula di Shannon
+    return C / 1e9  # converto in Gbps
