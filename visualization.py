@@ -1,4 +1,6 @@
 import matplotlib
+import numpy as np
+
 matplotlib.use('MacOSX')
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
@@ -8,44 +10,57 @@ from data_handler import save_map_as_png
 
 class SatelliteVisualization:
 
-    def __init__(self, city1, city2,  graph, satellite_validated, start, end):
+    def __init__(self, city1, city2, graph, satellite_validated, start, end):
         self.graph = graph
         self.satellite_validated = satellite_validated
-        self.city1 = city1
-        self.city2 = city2
         self.start = start
         self.end = end
 
-        # per schermo intero
+        # Coordinate città in [-180, 180]
+        self.city1_lat = city1.latitude.degrees
+        self.city1_lon = city1.longitude.degrees
+        self.city2_lat = city2.latitude.degrees
+        self.city2_lon = city2.longitude.degrees
+
+        # Normalizza le longitudini delle città nel range [-180, 180]
+        if self.city1_lon < -180 or self.city1_lon > 180:
+            self.city1_lon = ((self.city1_lon + 180) % 360) - 180
+        if self.city2_lon < -180 or self.city2_lon > 180:
+            self.city2_lon = ((self.city2_lon + 180) % 360) - 180
+
+        # Offset per latitudine e longitudine
+        offset_lat = 15
+        offset_lon = 20
+
+        # Calcola i limiti della mappa
+        llcrnrlat = min(self.city1_lat, self.city2_lat) - offset_lat
+        urcrnrlat = max(self.city1_lat, self.city2_lat) + offset_lat
+        llcrnrlon = min(self.city1_lon, self.city2_lon) - offset_lon
+        urcrnrlon = max(self.city1_lon, self.city2_lon) + offset_lon
+
+        # Apri a schermo intero (opzionale)
         mng = plt.get_current_fig_manager()
         mng.full_screen_toggle()
 
-        self.m = Basemap(projection='merc',
-                         llcrnrlat=10, urcrnrlat=65,
-                         llcrnrlon=120, urcrnrlon=260,
-                         resolution='i')
-
+        # Crea la mappa con i limiti calcolati
+        # lon_0=-40 serve a centrare la proiezione intorno a 40°W (Atlantico)
+        self.m = Basemap(
+            projection='merc',
+            llcrnrlat=llcrnrlat,
+            urcrnrlat=urcrnrlat,
+            llcrnrlon=llcrnrlon,
+            urcrnrlon=urcrnrlon,
+            lon_0=-40,
+            resolution='i'
+        )
 
     def add_cities(self):
-        # estraggo latitudine e longitudine delle città
-        city1_lat = self.city1.latitude.degrees
-        city1_lon = self.city1.longitude.degrees
-        city2_lat = self.city2.latitude.degrees
-        city2_lon = self.city2.longitude.degrees
-
-        if city1_lon < 0:
-            city1_lon += 360
-
-        if city2_lon < 0:
-            city2_lon += 360
-
         cities = [
-            {'name': 'Vancouver', 'lat': city1_lat, 'lon': city1_lon, 'color': 'magenta'},
-            {'name': 'Tokyo', 'lat': city2_lat, 'lon': city2_lon, 'color': 'green'}
+            {'name': 'New York', 'lat': self.city1_lat, 'lon': self.city1_lon, 'color': 'magenta'},
+            {'name': 'London',  'lat': self.city2_lat, 'lon': self.city2_lon, 'color': 'green'}
         ]
-
         for city in cities:
-            x, y = self.m(city['lon'], city['lat'])  # Converte le coordinate in coordinate della mappa
+            x, y = self.m(city['lon'], city['lat'])
             self.m.plot(x, y, marker='o', color=city['color'], markersize=8, label=city['name'])
 
     def draw_map(self):
@@ -53,20 +68,36 @@ class SatelliteVisualization:
         self.m.drawcountries()
         self.m.fillcontinents(color='lightgray')
 
-        parallels = range(-20, 71, 10)  # intervallo ogni 10 gradi
-        self.m.drawparallels(parallels, labels=[True, False, False, False], color='lightgray', linewidth=0.5)
+        # Calcola i paralleli in base ai limiti della mappa
+        llcrnrlat = int(np.floor(self.m.llcrnrlat / 10.0) * 10)
+        urcrnrlat = int(np.ceil(self.m.urcrnrlat / 10.0) * 10)
+        parallels = np.arange(llcrnrlat, urcrnrlat + 1, 10)
 
-        meridians = range(110, 271, 10)  # intervallo ogni 10 gradi
-        self.m.drawmeridians(meridians, labels=[False, False, False, True], color='lightgray', linewidth=0.5)
+        # Calcola i meridiani in base ai limiti della mappa
+        llcrnrlon = int(np.floor(self.m.llcrnrlon / 10.0) * 10)
+        urcrnrlon = int(np.ceil(self.m.urcrnrlon / 10.0) * 10)
+        meridians = np.arange(llcrnrlon, urcrnrlon + 1, 10)
+
+        self.m.drawparallels(parallels, labels=[True, False, False, False],
+                             color='lightgray', linewidth=0.5)
+        self.m.drawmeridians(meridians, labels=[False, False, False, True],
+                             color='lightgray', linewidth=0.5)
 
     def plot_tracks(self):
+        """
+        Disegna le traiettorie dei satelliti validati (track).
+        """
         for sat in self.satellite_validated:
             track = sat['track']
-            lats, lons, alt = zip(*track)  # separa latitudine e longitudine
-            x, y = self.m(lons, lats)  # converto le coordinate in coordinate della mappa
+            lats, lons, alt = zip(*track)
+            x, y = self.m(lons, lats)
             self.m.plot(x, y, linewidth=1)
 
     def plot_nodes(self, path=None):
+        """
+        Disegna i nodi del grafo (satelliti), colorando diversamente
+        quelli di start, end e quelli sul cammino minimo.
+        """
         plotted_node_first = False
         for node, data in self.graph.nodes(data=True):
             x, y = self.m(data['lon'], data['lat'])
@@ -85,6 +116,10 @@ class SatelliteVisualization:
                 self.m.plot(x, y, marker='o', color='blue', markersize=4)
 
     def plot_edges(self, path=None, path_label="Shortest path"):
+        """
+        Disegna gli archi del grafo. Se un arco fa parte del percorso
+        minimo (path), lo colora in cyan, altrimenti in rosso.
+        """
         plotted_path_first = False
         for u, v, data in self.graph.edges(data=True):
             node1 = self.graph.nodes[u]
@@ -92,7 +127,10 @@ class SatelliteVisualization:
             x1, y1 = self.m(node1['lon'], node1['lat'])
             x2, y2 = self.m(node2['lon'], node2['lat'])
 
-            if path and ((u in path and v in path and path.index(u) + 1 == path.index(v)) or (v in path and u in path and path.index(v) + 1 == path.index(u))):
+            if path and (
+                (u in path and v in path and path.index(u) + 1 == path.index(v)) or
+                (v in path and u in path and path.index(v) + 1 == path.index(u))
+            ):
                 if not plotted_path_first:
                     self.m.plot([x1, x2], [y1, y2], color='cyan', linewidth=3, label=path_label)
                     plotted_path_first = True

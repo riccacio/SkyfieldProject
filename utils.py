@@ -53,8 +53,8 @@ def euclidean_distance(lat1, lon1, alt1, lat2, lon2, alt2):
 # calcolo latenza
 # per calcolare la latenza devo prendere la distanza tra due satelliti e dividere per la velocità della luce
 def latency_calculation(distance):
-    c = 299792.458 # velocità della luce in km/s
-    return distance / c
+    c = 299792458 # velocità della luce in km/s
+    return distance*1000 / c
 
 # calcolo throughput
 # per calcolare il throughput devo utilizzare la capacità del canale, usando il teorema di Shannon
@@ -64,3 +64,23 @@ def calculate_capacity(P_t, G_t, G_r, lambda_, d, B, N):
     SNR = P_r / N  # Rapporto segnale-rumore
     C = B * np.log2(1 + SNR)  # Formula di Shannon
     return C / 1e9  # converto in Gbps
+
+
+
+
+
+
+# Esempio di utilizzo:
+# Supponiamo di avere un percorso definito (lista di nomi satellitari) e un grafo G con le informazioni dei satelliti.
+# Inoltre, definiamo le coordinate (latitudine, longitudine) per le città di origine e destinazione.
+# (I valori reali dovranno essere estratti dal tuo sistema, questo è solo un esempio.)
+path = ["Sat1", "Sat2", "Sat3"]
+city_origin = (49.2827, -123.1207)  # Vancouver (lat, lon)
+city_dest = (35.6895, 139.6917)  # Tokyo (lat, lon)
+
+# Supponiamo che G sia il grafo che hai creato e popolato con i nodi satellitari
+# (ad esempio, G = sat_graph.get_graph())
+
+# Calcola il throughput totale per Ka e Ku band
+total_ka, total_ku = calculate_total_comm_throughput(path, G, city_origin, city_dest,
+                                                     isl_params, ground_ka_params, ground_ku_params)
