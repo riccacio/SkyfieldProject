@@ -7,7 +7,7 @@ from utils import haversine_with_altitude as haversine, euclidean_distance
 
 class SatelliteTracker:
 
-    def __init__(self, city1, city2, tle_file="gp.php"):
+    def __init__(self, city1, city2, E_to_W,  tle_file="gp.php"):
         # Carica i TLE (puoi usare anche l'URL se preferisci)
         tle_url = "https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=tle"
         self.ts = load.timescale()
@@ -15,20 +15,23 @@ class SatelliteTracker:
         # self.satellites = load.tle_file(tle_url)
         print(f"Satelliti caricati: {len(self.satellites)}")
 
+        self.E_to_W = E_to_W
+
         # Coordinate delle città in [-180,180]
         self.city1_lat = city1.latitude.degrees
         self.city1_lon = city1.longitude.degrees
         self.city2_lat = city2.latitude.degrees
         self.city2_lon = city2.longitude.degrees
 
-        # Normalizza le longitudini nel range [-180, 180]
-        if self.city1_lon < -180 or self.city1_lon > 180:
-            self.city1_lon = ((self.city1_lon + 180) % 360) - 180
-        if self.city2_lon < -180 or self.city2_lon > 180:
-            self.city2_lon = ((self.city2_lon + 180) % 360) - 180
+        if E_to_W:
+            if self.city1_lon < 0:
+                self.city1_lon += 360
 
-        # Offset di 10 gradi
-        offset = 10
+            if self.city2_lon < 0:
+                self.city2_lon += 360
+
+
+        offset = 15
         self.min_lat = min(self.city1_lat, self.city2_lat) - offset
         self.max_lat = max(self.city1_lat, self.city2_lat) + offset
         self.min_lon = min(self.city1_lon, self.city2_lon) - offset
@@ -55,6 +58,10 @@ class SatelliteTracker:
                 sat_lat = subpoint.latitude.degrees
                 sat_lon = subpoint.longitude.degrees
                 sat_alt = subpoint.elevation.km
+
+                if self.E_to_W:
+                    if (sat_lon < 0):
+                        sat_lon += 360
 
                 # Controllo lat, lon, alt
                 if not ((self.min_lat <= sat_lat <= self.max_lat) and

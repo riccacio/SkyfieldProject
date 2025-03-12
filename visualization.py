@@ -1,20 +1,24 @@
 import matplotlib
 import numpy as np
 
-matplotlib.use('MacOSX')
+#matplotlib.use('MacOSX')
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
 from skyfield.toposlib import Topos
-from data_handler import save_map_as_png
+import data_handler
 
 
 class SatelliteVisualization:
 
-    def __init__(self, city1, city2, graph, satellite_validated, start, end):
+    def __init__(self, city1_name, city2_name, city1, city2, graph, satellite_validated, start, end, E_to_W, fullscreen):
         self.graph = graph
         self.satellite_validated = satellite_validated
         self.start = start
         self.end = end
+        self.E_to_W = E_to_W
+
+        self.city1_name = city1_name
+        self.city2_name = city2_name
 
         # Coordinate città in [-180, 180]
         self.city1_lat = city1.latitude.degrees
@@ -22,42 +26,41 @@ class SatelliteVisualization:
         self.city2_lat = city2.latitude.degrees
         self.city2_lon = city2.longitude.degrees
 
-        # Normalizza le longitudini delle città nel range [-180, 180]
-        if self.city1_lon < -180 or self.city1_lon > 180:
-            self.city1_lon = ((self.city1_lon + 180) % 360) - 180
-        if self.city2_lon < -180 or self.city2_lon > 180:
-            self.city2_lon = ((self.city2_lon + 180) % 360) - 180
+        if self.E_to_W:
+            if self.city1_lon < 0:
+                self.city1_lon += 360
+            if self.city2_lon < 0:
+                self.city2_lon += 360
 
         # Offset per latitudine e longitudine
         offset_lat = 15
         offset_lon = 20
 
         # Calcola i limiti della mappa
-        llcrnrlat = min(self.city1_lat, self.city2_lat) - offset_lat
+        llcrnrlat = min(self.city1_lat, self.city2_lat) - offset_lat-10
         urcrnrlat = max(self.city1_lat, self.city2_lat) + offset_lat
         llcrnrlon = min(self.city1_lon, self.city2_lon) - offset_lon
         urcrnrlon = max(self.city1_lon, self.city2_lon) + offset_lon
 
-        # Apri a schermo intero (opzionale)
-        mng = plt.get_current_fig_manager()
-        mng.full_screen_toggle()
+        if fullscreen:
+            mng = plt.get_current_fig_manager()
+            mng.full_screen_toggle()
+
 
         # Crea la mappa con i limiti calcolati
-        # lon_0=-40 serve a centrare la proiezione intorno a 40°W (Atlantico)
         self.m = Basemap(
             projection='merc',
             llcrnrlat=llcrnrlat,
             urcrnrlat=urcrnrlat,
             llcrnrlon=llcrnrlon,
             urcrnrlon=urcrnrlon,
-            lon_0=-40,
             resolution='i'
         )
 
     def add_cities(self):
         cities = [
-            {'name': 'New York', 'lat': self.city1_lat, 'lon': self.city1_lon, 'color': 'magenta'},
-            {'name': 'London',  'lat': self.city2_lat, 'lon': self.city2_lon, 'color': 'green'}
+            {'name': self.city1_name, 'lat': self.city1_lat, 'lon': self.city1_lon, 'color': 'magenta'},
+            {'name': self.city2_name,  'lat': self.city2_lat, 'lon': self.city2_lon, 'color': 'green'}
         ]
         for city in cities:
             x, y = self.m(city['lon'], city['lat'])
@@ -103,9 +106,9 @@ class SatelliteVisualization:
             x, y = self.m(data['lon'], data['lat'])
 
             if node == self.start[0]:
-                self.m.plot(x, y, marker='o', color='purple', markersize=6, label='Source')
+                self.m.plot(x, y, marker='o', color='red', markersize=6, label='Source')
             elif node == self.end[0]:
-                self.m.plot(x, y, marker='o', color='red', markersize=6, label='Destination')
+                self.m.plot(x, y, marker='o', color='purple', markersize=6, label='Destination')
             elif path and node in path:
                 if not plotted_node_first:
                     self.m.plot(x, y, marker='o', color='black', markersize=6, label='Satellites in shortest path')
@@ -120,6 +123,25 @@ class SatelliteVisualization:
         Disegna gli archi del grafo. Se un arco fa parte del percorso
         minimo (path), lo colora in cyan, altrimenti in rosso.
         """
+
+        first_sat = path[0]
+        last_sat = path[-1]
+
+        first_node = self.graph.nodes[first_sat]
+        last_node = self.graph.nodes[last_sat]
+
+        x_first, y_first = self.m(first_node['lon'], first_node['lat'])
+        x_last, y_last = self.m(last_node['lon'], last_node['lat'])
+
+        x_city1, y_city1 = self.m(self.city1_lon, self.city1_lat)
+        x_city2, y_city2 = self.m(self.city2_lon, self.city2_lat)
+
+        self.m.plot([x_city1, x_first], [y_city1, y_first], color='lime', linewidth=3,
+                    label='City-Satellite Connection')
+        self.m.plot([x_city2, x_last], [y_city2, y_last], color='lime', linewidth=3)
+
+
+
         plotted_path_first = False
         for u, v, data in self.graph.edges(data=True):
             node1 = self.graph.nodes[u]
@@ -141,8 +163,8 @@ class SatelliteVisualization:
 
     def show(self, save_as_png=False):
         plt.title("Tracce dei satelliti e connessioni")
-        plt.legend(loc='lower right', fontsize=10)
+        #plt.legend(loc='lower right', fontsize=10)
         if save_as_png:
-            save_map_as_png("satellite_map.png")
+            data_handler.DataHandler.save_map_as_png("satellite_map.png")
         else:
             plt.show()

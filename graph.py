@@ -6,10 +6,7 @@ from utils import latency_calculation
 from utils import euclidean_distance
 
 class SatelliteGraph:
-    """
-    LISL_range = 659.5, 1319, 1500, 1700, 2500, e 5016 km
-    """
-    def __init__(self, LISL_range=659.5):
+    def __init__(self, LISL_range):
         self.G = nx.Graph()
         self.LISL_range = LISL_range
 
@@ -63,47 +60,97 @@ class SatelliteGraph:
         except KeyError:
             print("Uno o entrambi i nodi non esistono nel grafo")
 
-    def calculate_total_latency(self, path):
+    def calculate_total_latency(self, path, city1, city2, congestion_factor):
+        """
+        Restituisce la latenza totale (one-way) in secondi.
+        """
         total_latency = 0
 
         if not path or len(path) < 2:
             print("Il percorso deve contenere almeno due nodi.")
             return None
 
+
+        distance_city1_sat = euclidean_distance(
+            self.G.nodes[path[0]]['lat'], self.G.nodes[path[0]]['lon'], self.G.nodes[path[0]]['alt'],
+            city1.latitude.degrees, city1.longitude.degrees, 0
+        )
+
+        distance_city2_sat = euclidean_distance(
+            self.G.nodes[path[-1]]['lat'], self.G.nodes[path[-1]]['lon'], self.G.nodes[path[-1]]['alt'],
+            city2.latitude.degrees, city2.longitude.degrees, 0
+        )
+
+        lat_earth_sat = latency_calculation(distance_city1_sat) * (1 / (1 - congestion_factor))
+        lat_sat_earth = latency_calculation(distance_city2_sat) * (1 / (1 - congestion_factor))
+
+        total_latency += lat_earth_sat + lat_sat_earth
+
+        # Latenza ISL
         for i in range(len(path) - 1):
             found = False
             for edge in self.G.edges(data=True):
-               if (edge[0] == path[i] and edge[1] == path[i+1]) or (edge[1] == path[i] and edge[0] == path[i+1]):
-                    total_latency += latency_calculation(edge[2]['weight'])
+                if (edge[0] == path[i] and edge[1] == path[i + 1]) or (edge[1] == path[i] and edge[0] == path[i + 1]):
+                    total_latency += latency_calculation(edge[2]['weight']) * (1 / (1 - congestion_factor))
                     found = True
                     break
             if not found:
                 raise ValueError(f"Arco non trovato tra {path[i]} e {path[i + 1]}")
+
         return total_latency
 
-    def calculate_total_throughput(self, path, P_t, G_t, G_r, lambda_, B, N):
+    def calculate_total_throughput(
+            self, path, city1, city2, congestion_factor,
+            P_t_laser, G_laser, lambda_laser, B_laser,
+            P_t_ka, G_ka, lambda_ka, B_ka,
+            P_t_ku, G_ku, lambda_ku, B_ku
+    ):
         """
-        Calcola il throughput massimo lungo un percorso dato.
+        Calcola e ritorna (throughput_downlink, throughput_uplink, throughput_ISL).
         """
         if not path or len(path) < 2:
             print("Il percorso deve contenere almeno due nodi.")
             return None
 
-        throughput_values = []
+        # calcolo throughput banda Ka (downlink)
+        distance_city1_sat = euclidean_distance(
+            self.G.nodes[path[0]]['lat'], self.G.nodes[path[0]]['lon'], self.G.nodes[path[0]]['alt'],
+            city1.latitude.degrees, city1.longitude.degrees, 0
+        )
+        distance_city2_sat = euclidean_distance(
+            self.G.nodes[path[-1]]['lat'], self.G.nodes[path[-1]]['lon'], self.G.nodes[path[-1]]['alt'],
+            city2.latitude.degrees, city2.longitude.degrees, 0
+        )
 
+        thr_down_ka_1 = calculate_capacity(P_t_ka, G_ka, lambda_ka, distance_city1_sat, B_ka) * (1 - congestion_factor)
+        thr_down_ka_2 = calculate_capacity(P_t_ka, G_ka, lambda_ka, distance_city2_sat, B_ka) * (1 - congestion_factor)
+        throughput_downlink_ka = min(thr_down_ka_1, thr_down_ka_2)
+
+        # calcolo throughput banda Ku (uplink)
+        thr_up_ku_1 = calculate_capacity(P_t_ku, G_ku, lambda_ku, distance_city1_sat, B_ku) * (1 - congestion_factor)
+        thr_up_ku_2 = calculate_capacity(P_t_ku, G_ku, lambda_ku, distance_city2_sat, B_ku) * (1 - congestion_factor)
+        throughput_uplink_ku = min(thr_up_ku_1, thr_up_ku_2)
+
+        # calcolo throughput LISL
+        throughput_values_ISL = []
         for i in range(len(path) - 1):
             found = False
             for edge in self.G.edges(data=True):
                 if (edge[0] == path[i] and edge[1] == path[i + 1]) or (edge[1] == path[i] and edge[0] == path[i + 1]):
-                    throughput_values.append(calculate_capacity(
-                        P_t, G_t, G_r, lambda_, edge[2]['weight'], B, N
-                    ))
+                    thr_isl = (calculate_capacity(P_t_laser, G_laser, lambda_laser, edge[2]['weight'], B_laser) * (1 - congestion_factor))
+                    throughput_values_ISL.append(thr_isl)
                     found = True
                     break
             if not found:
                 raise ValueError(f"Arco non trovato tra {path[i]} e {path[i + 1]}")
 
-        return min(throughput_values) if throughput_values else None  # Minimo valore lungo il percorso
+        throughput_isl_laser = min(throughput_values_ISL) if throughput_values_ISL else 0
+
+        print(f"Throughput Downlink banda Ka: {throughput_downlink_ka:.3f} Gbps")
+        print(f"Throughput Uplink banda Ku: {throughput_uplink_ku:.3f} Gbps")
+        print(f"Throughput ISL Laser: {throughput_isl_laser:.3f} Gbps")
+
+        return throughput_downlink_ka, throughput_uplink_ku, throughput_isl_laser
 
 
 
