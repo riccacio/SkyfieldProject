@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 
-class plotGenerator:
+class PlotGenerator:
     def __init__(self):
         # Puoi eventualmente aggiungere parametri per personalizzare lo stile
         pass
@@ -51,4 +51,18 @@ class plotGenerator:
         plt.legend()
         plt.grid(True)
         plt.tight_layout()
+        plt.show()
+
+    def plot_latency_every_cities(self, cities, rtt_list):
+        # Creazione del grafico a colonne
+        plt.figure(figsize=(10, 5))  # Imposta la dimensione della figura
+        plt.bar(cities, rtt_list, color='blue', width=0.4)  # Crea il bar chart
+
+        # Etichette e titolo
+        plt.xlabel("Città")
+        plt.ylabel("RTT (ms)")
+        plt.title("RTT verso diverse città")
+        plt.xticks(rotation=45)  # Ruota i nomi delle città per leggibilità
+
+        # Mostra il grafico
         plt.show()

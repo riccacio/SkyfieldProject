@@ -118,7 +118,7 @@ class SatelliteVisualization:
             else:
                 self.m.plot(x, y, marker='o', color='blue', markersize=4)
 
-    def plot_edges(self, path=None, path_label="Shortest path"):
+    def plot_edges(self, path, range_value, path_label="Shortest path"):
         """
         Disegna gli archi del grafo. Se un arco fa parte del percorso
         minimo (path), lo colora in cyan, altrimenti in rosso.
@@ -159,7 +159,8 @@ class SatelliteVisualization:
                 else:
                     self.m.plot([x1, x2], [y1, y2], color='cyan', linewidth=3)
             else:
-                self.m.plot([x1, x2], [y1, y2], color='red', linewidth=0.1)
+                if range_value == 659.5: # solo se il LISL_range è 659.5, gli altri no, altrimenti non si vedrebbe bene la mappa
+                    self.m.plot([x1, x2], [y1, y2], color='red', linewidth=0.1)
 
     def show(self, save_as_png=False):
         plt.title("Tracce dei satelliti e connessioni")

@@ -33,6 +33,13 @@ class DataHandler:
         self.throughput_isl_list.append(throughput_isl)
         self.results.append(result)
 
+
+    def add_rtt_value(self, value):
+        self.rtt_list.append(value)
+
+    def get_rtt_values(self):
+        return self.rtt_list
+
     def save_results_to_csv(self, filename):
         """
         Salva i risultati in un file CSV.

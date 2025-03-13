@@ -13,7 +13,7 @@ class SatelliteTracker:
         self.ts = load.timescale()
         self.satellites = load.tle_file(tle_file)
         # self.satellites = load.tle_file(tle_url)
-        print(f"Satelliti caricati: {len(self.satellites)}")
+        print(f"\nSatelliti caricati: {len(self.satellites)}")
 
         self.E_to_W = E_to_W
 
