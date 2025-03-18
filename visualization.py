@@ -33,7 +33,7 @@ class SatelliteVisualization:
                 self.city2_lon += 360
 
         # Offset per latitudine e longitudine
-        offset_lat = 15
+        offset_lat = 10
         offset_lon = 20
 
         # Calcola i limiti della mappa
@@ -118,49 +118,67 @@ class SatelliteVisualization:
             else:
                 self.m.plot(x, y, marker='o', color='blue', markersize=4)
 
-    def plot_edges(self, path, range_value, path_label="Shortest path"):
+    def plot_edges(self, path_d, path_m, range_value, path_label="Shortest path"):
         """
-        Disegna gli archi del grafo. Se un arco fa parte del percorso
-        minimo (path), lo colora in cyan, altrimenti in rosso.
+        Disegna gli archi del grafo per due percorsi (ad es. path_d e path_m)
+        sulla stessa mappa. Per ogni percorso:
+          - Collega la città al primo e all'ultimo satellite (in lime).
+          - Colora gli archi che fanno parte del percorso con un colore specifico
+            (cyan per path_d e magenta per path_m).
+          - Gli altri archi li colora in rosso (con linewidth ridotto, se il range_value è 659.5).
         """
-
-        first_sat = path[0]
-        last_sat = path[-1]
-
-        first_node = self.graph.nodes[first_sat]
-        last_node = self.graph.nodes[last_sat]
-
-        x_first, y_first = self.m(first_node['lon'], first_node['lat'])
-        x_last, y_last = self.m(last_node['lon'], last_node['lat'])
-
+        # Coordinate città trasformate
         x_city1, y_city1 = self.m(self.city1_lon, self.city1_lat)
         x_city2, y_city2 = self.m(self.city2_lon, self.city2_lat)
 
-        self.m.plot([x_city1, x_first], [y_city1, y_first], color='lime', linewidth=3,
-                    label='City-Satellite Connection')
-        self.m.plot([x_city2, x_last], [y_city2, y_last], color='lime', linewidth=3)
+        # Lista di percorsi da plottare con il colore associato
+        paths = [(path_d, 'cyan'), (path_m, 'magenta')]
 
+        for path, color in paths:
+            if path is None or len(path) == 0:
+                continue  # Salta se il percorso non esiste
 
+            # Collega città al primo e all'ultimo satellite del percorso
+            first_sat = path[0]
+            last_sat = path[-1]
+            first_node = self.graph.nodes[first_sat]
+            last_node = self.graph.nodes[last_sat]
+            x_first, y_first = self.m(first_node['lon'], first_node['lat'])
+            x_last, y_last = self.m(last_node['lon'], last_node['lat'])
 
-        plotted_path_first = False
+            self.m.plot([x_city1, x_first], [y_city1, y_first], color='lime', linewidth=3,
+                        label='City-Satellite Connection')
+            self.m.plot([x_city2, x_last], [y_city2, y_last], color='lime', linewidth=3)
+
+            # Flag per plottare l'etichetta del percorso una sola volta
+            plotted_label = False
+
+            # Itera su tutti gli archi del grafo
+            for u, v, data in self.graph.edges(data=True):
+                node1 = self.graph.nodes[u]
+                node2 = self.graph.nodes[v]
+                x1, y1 = self.m(node1['lon'], node1['lat'])
+                x2, y2 = self.m(node2['lon'], node2['lat'])
+
+                # Se l'arco fa parte del percorso corrente (ovvero, u e v sono adiacenti nella lista path)
+                if (u in path and v in path and abs(path.index(u) - path.index(v)) == 1):
+                    if not plotted_label:
+                        self.m.plot([x1, x2], [y1, y2], color=color, linewidth=3, label=path_label)
+                        plotted_label = True
+                    else:
+                        self.m.plot([x1, x2], [y1, y2], color=color, linewidth=3)
+                else:
+                    # Disegna gli archi che non fanno parte del percorso con un colore sottile, ma solo se il range_value è 659.5
+                    if range_value == 659.5:
+                        self.m.plot([x1, x2], [y1, y2], color='red', linewidth=0.1)
+
+        # (Eventualmente, se vuoi anche disegnare tutti gli archi in rosso per contesto, puoi farlo dopo)
         for u, v, data in self.graph.edges(data=True):
             node1 = self.graph.nodes[u]
             node2 = self.graph.nodes[v]
             x1, y1 = self.m(node1['lon'], node1['lat'])
             x2, y2 = self.m(node2['lon'], node2['lat'])
-
-            if path and (
-                (u in path and v in path and path.index(u) + 1 == path.index(v)) or
-                (v in path and u in path and path.index(v) + 1 == path.index(u))
-            ):
-                if not plotted_path_first:
-                    self.m.plot([x1, x2], [y1, y2], color='cyan', linewidth=3, label=path_label)
-                    plotted_path_first = True
-                else:
-                    self.m.plot([x1, x2], [y1, y2], color='cyan', linewidth=3)
-            else:
-                if range_value == 659.5: # solo se il LISL_range è 659.5, gli altri no, altrimenti non si vedrebbe bene la mappa
-                    self.m.plot([x1, x2], [y1, y2], color='red', linewidth=0.1)
+            self.m.plot([x1, x2], [y1, y2], color='red', linewidth=0.1)
 
     def show(self, save_as_png=False):
         plt.title("Tracce dei satelliti e connessioni")

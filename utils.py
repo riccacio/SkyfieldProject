@@ -62,7 +62,7 @@ def latency_calculation(distance):
 def calculate_capacity(P_t, G, lambda_, d, B):
     noise = 1e-21 * B  # Potenza del rumore
     P_r = P_t * (G**2) * (lambda_ / (4 * np.pi * d*1000))**2  # Potenza ricevuta
-    SNR = P_r / noise  # Rapporto segnale-rumore
+    SNR = P_r / noise  # Rapporto segnale-rumore 0,97db al km parte loss + attenuazione atmosferica, caso peggiore 185dB tutta la tratta
     C = B * np.log2(1 + SNR)
     return C / 1e9  # Convertito in Gbps
 
