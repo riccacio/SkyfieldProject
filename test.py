@@ -1,6 +1,8 @@
 import os
+from datetime import timedelta
 
 from matplotlib import pyplot as plt
+from skyfield.api import load
 
 from data_handler import DataHandler
 from satellite_tracker import SatelliteTracker
@@ -13,17 +15,22 @@ class Test:
         self.dh = DataHandler()
         self.pg = PlotGenerator()
 
-    def test_city_pair_with_lisl_range(self, city1_name, city1, city2_name, city2, E_to_W, LISL_range):
+    def test_city_pair_with_lisl_range(self, city1_name, city1, city2_name, city2, E_to_W, LISL_range, plusGrid, load_factor):
         """
         Testa la comunicazione tra due città variando il LISL_range.
         """
         desktop_folder = os.path.join(os.path.expanduser("~"), "Desktop", "MyPlots")
         os.makedirs(desktop_folder, exist_ok=True)
 
+        ts = load.timescale()
+        current_start_time = ts.now()  # Inizia dalla ora corrente
+
+        n_simulations = 2 # minuti di simulazione ogni minuto
         for range_value in LISL_range:
+            self.dh.reset_avg_values()
             print(f"\nTest tra {city1_name} e {city2_name} con LISL_range: {range_value} km")
-            for i in range(0, 5):
-                tracker = SatelliteTracker(city1, city2, E_to_W)
+            for i in range(0, n_simulations):
+                tracker = SatelliteTracker(city1, city2, current_start_time, E_to_W)
                 satellites = tracker.filter_satellites()
 
                 print(f"Satelliti validi dentro il range: {len(satellites)}")
@@ -36,9 +43,13 @@ class Test:
 
                 sat_graph = SatelliteGraph(range_value)
                 sat_graph.add_nodes(satellites)
-                #sat_graph.connect_nodes_plus_grid()
-                #sat_graph.connect_nodes()
-                sat_graph.connect_nodes_hybrid()
+
+                if plusGrid:
+                    print("Connessione con topologia +Grid")
+                    sat_graph.connect_nodes_hybrid()
+                else:
+                    print("Connessione con topologia libera")
+                    sat_graph.connect_nodes()
 
                 print(f"Numero di nodi: {sat_graph.get_graph().number_of_nodes()}"
                       f"\nNumero di archi: {sat_graph.get_graph().number_of_edges()}")
@@ -46,129 +57,183 @@ class Test:
                 DataHandler.save_graph_to_csv(sat_graph.get_graph())
 
                 # Calcola il percorso più breve con dijkstra
-                shortest_path_dijkstra = sat_graph.find_shortest_path_Dijkstra(start_node[0], end_node[0])
+                shortest_path_dijkstra, distance_d = sat_graph.find_shortest_path_Dijkstra(start_node[0], end_node[0])
                 if shortest_path_dijkstra:
                     print("Il percorso più breve è:", shortest_path_dijkstra)
+                    print("Con distanza totale: ", distance_d)
 
                 # Calcola il percorso più breve con min hop count
-                shortest_path_minHops = sat_graph.find_shortest_path_minHop(start_node[0], end_node[0])
+                shortest_path_minHops, distance_m = sat_graph.find_shortest_path_minHop(start_node[0], end_node[0])
                 if shortest_path_minHops:
                     print("Il percorso più breve è:", shortest_path_minHops)
-                    print(f"Con {len(shortest_path_minHops)-1} salti")
+                    print("Con distanza totale: ", distance_m)
 
-                # Calcola la latenza RTT
-                load_factor = 0
-                latency = sat_graph.calculate_total_latency(shortest_path_dijkstra, city1, city2, load_factor)
-                rtt = 2 * latency * 1000 + (len(shortest_path_dijkstra) * 2)
-                half_rtt = latency * 1000 + len(shortest_path_dijkstra)
 
-                print(f"Latenza RTT/2: {half_rtt:.3f} ms, RTT: {rtt:.3f} ms")
+                print("Fattore di carico: ", load_factor)
 
-                load_factor = 0
-                latency = sat_graph.calculate_total_latency(shortest_path_minHops, city1, city2, load_factor)
-                rtt = 2 * latency * 1000 + (len(shortest_path_minHops) * 2)
-                half_rtt = latency * 1000 + len(shortest_path_minHops)
+                if shortest_path_dijkstra is not None or shortest_path_minHops is not None:
+                    n_hops_d = len(shortest_path_dijkstra) - 1
 
-                print(f"Latenza RTT/2: {half_rtt:.3f} ms, RTT: {rtt:.3f} ms")
+                    # Calcolo di RTT e RTT/2 con dijkstra
+                    latency_d = sat_graph.calculate_total_latency(shortest_path_dijkstra, city1, city2, load_factor)
+                    rtt_d = 2 * latency_d * 1000 + ((n_hops_d+1) * 2)
+                    half_rtt_d = latency_d * 1000 + (n_hops_d+1)
 
-                """
-                    # Parametri dei segnali
-                    params = {
-                        "P_t_laser": 1, "G_laser": 80, "lambda_laser": 1.55e-6, "B_laser": 80e9,
-                        "P_t_ku": 50, "G_ku_dBi": 45, "lambda_ku": 0.0214, "B_ku": 13e9,
-                        "P_t_ka": 30, "G_ka_dBi": 50, "lambda_ka": 0.011, "B_ka": 20e9
-                    }
-        
-                    # converto i guadagni
-                    params["G_ku"] = 10 ** (params["G_ku_dBi"] / 10)
-                    params["G_ka"] = 10 ** (params["G_ka_dBi"] / 10)
-                    params["G_laser"] = 10 ** (params["G_laser"] / 10)
-        
-                    downlink_ka, uplink_ku, isl_laser = sat_graph.calculate_total_throughput(
-                        shortest_path, city1, city2, load_factor,
-                        params["P_t_laser"], params["G_laser"], params["lambda_laser"], params["B_laser"],
-                        params["P_t_ka"], params["G_ka"], params["lambda_ka"], params["B_ka"],
-                        params["P_t_ku"], params["G_ku"], params["lambda_ku"], params["B_ku"]
-                    )
-        
-                    
-                    self.dh.add_result(city1_name, city2_name, range_value, len(shortest_path), half_rtt, rtt,
-                                  downlink_ka, uplink_ku, isl_laser)
-                """
-                self.dh.save_results_to_csv("results.csv")
+                    print(f"Latenza con Dijkstra RTT/2: {half_rtt_d:.3f} ms, RTT: {rtt_d:.3f} ms")
+
+                    # Calcolo di RTT e RTT/2 con min hop count
+                    n_hops_m = len(shortest_path_minHops) - 1
+                    latency_m = sat_graph.calculate_total_latency(shortest_path_minHops, city1, city2, load_factor)
+                    rtt_m = 2 * latency_m * 1000 + ((n_hops_m+1)* 2)
+                    half_rtt_m = latency_m * 1000 + (n_hops_m+1)
+
+                    print(f"Latenza con Min Hops RTT/2: {half_rtt_m:.3f} ms, RTT: {rtt_m:.3f} ms")
+
+                else:
+                    print("Percorso non trovato")
+                    n_hops_d = 0
+                    n_hops_m = 0
+                    rtt_d = 0
+                    rtt_m = 0
+                    half_rtt_d = 0
+                    half_rtt_m = 0
+
+
+                self.dh.add_result(n_hops_d, n_hops_m, half_rtt_d, rtt_d, half_rtt_m, rtt_m, distance_d, distance_m)
+
+                #self.dh.save_results_to_csv("results.csv")
 
 
                 # visualizzazione della mappa, mostra tutti i collegamenti solo per range_value di 659.5 km
-                viz = SatelliteVisualization(city1_name, city2_name, city1, city2, sat_graph.get_graph(),
-                                             satellites, start_node, end_node, E_to_W, False)
-                viz.draw_map()
-                viz.add_cities()
-                viz.plot_edges(shortest_path_dijkstra, shortest_path_minHops, range_value)
-                viz.plot_nodes(shortest_path_dijkstra)
+                #viz = SatelliteVisualization(city1_name, city2_name, city1, city2, sat_graph.get_graph(),
+                                            # satellites, start_node, end_node, E_to_W, False, plusGrid)
+                #viz.draw_map()
+                #viz.add_cities()
+                #viz.plot_edges(shortest_path_dijkstra, shortest_path_minHops, range_value)
+                #viz.plot_nodes(shortest_path_dijkstra)
+
 
                 # Genera il nome file unico per questa iterazione
-                filename = os.path.join(desktop_folder, f"myplot{i + 1}.png")
+              #  filename = os.path.join(desktop_folder, f"myplot{i + 1}.png")
 
                 # Se il metodo show() non supporta direttamente il salvataggio, puoi
                 # richiamare plt.savefig() subito dopo aver disegnato la figura.
                 # Ad esempio, se viz.show() chiama plt.show() alla fine, puoi fare:
-                plt.savefig(filename)
-                print(f"Plot salvato in: {filename}")
+                #plt.savefig(filename, dpi=600)
+                #print(f"Plot salvato in: {filename}")
 
                 # Se preferisci visualizzare anche il plot, puoi chiamare plt.show()
                 # oppure chiudere la figura per evitare conflitti nelle iterazioni successive:
-                plt.close()
+                #plt.close()
 
 
                 #viz.show(save_as_png=False)
 
+                current_start_time += timedelta(minutes=1)
+
+            rtt_d_list, half_rtt_d_list, rtt_m_list , half_rtt_m_list, n_hops_d_list, n_hops_m_list, distance_d_list, distance_m_list = self.dh.get_results_lists()
+
+            avg_rtt_d = sum(rtt_d_list) / n_simulations
+            avg_half_rtt_d = sum(half_rtt_d_list) / n_simulations
+            avg_rtt_m = sum(rtt_m_list) / n_simulations
+            avg_half_rtt_m = sum(half_rtt_m_list) / n_simulations
+            avg_distance_d = sum(distance_d_list) / n_simulations
+            avg_distance_m = sum(distance_m_list) / n_simulations
+            avg_n_hop_d = sum(n_hops_d_list) / n_simulations
+            avg_n_hop_m = sum(n_hops_m_list) / n_simulations
+
+            self.dh.add_avg_result(city1_name, city2_name, range_value,
+                                   avg_n_hop_d, avg_n_hop_m,
+                                   avg_rtt_d, avg_rtt_m,
+                                   avg_half_rtt_d, avg_half_rtt_m,
+                                   avg_distance_d, avg_distance_m)
+
+            print (f"RTT medio Dijkstra: {avg_rtt_d:.3f} ms")
+            print (f"RTT/2 medio Dijkstra: {avg_half_rtt_d:.3f} ms")
+            print (f"RTT medio MinHops: {avg_rtt_m:.3f} ms")
+            print (f"RTT/2 medio MinHops: {avg_half_rtt_m:.3f} ms")
+            print (f"Numero di salti medio Dijkstra: {avg_n_hop_d:.2f}")
+            print (f"Numero di salti medio MinHops: {avg_n_hop_m:.2f}")
+            print(f"Distanza totale media Dijkstra: {avg_distance_d:.3f} km")
+            print(f"Distanza totale media MinHops: {avg_distance_m:.3f} km")
+
+        self.dh.save_results_to_csv("results.csv")
+        self.pg.plot_latency(LISL_range, self.dh, plusGrid)
+        self.pg.plot_total_distance(LISL_range, self.dh, plusGrid)
+        self.pg.plot_n_hop(LISL_range, self.dh, plusGrid)
+        #self.pg.plot_throughput(LISL_range, throughput_downlink_list, throughput_uplink_list, throughput_isl_list)
 
 
-
-        rtt_list, half_rtt_list, throughput_downlink_list, throughput_uplink_list, throughput_isl_list = self.dh.get_results_lists()
-        self.pg.plot_latency(LISL_range, half_rtt_list, rtt_list)
-        self.pg.plot_throughput(LISL_range, throughput_downlink_list, throughput_uplink_list, throughput_isl_list)
-
-
-    def test_multiple_cities_with_fixed_lisl(self, city1_name, city1, cities, fixed_LISL):
+    def test_multiple_cities_with_fixed_lisl(self, city1_name, city1, cities, fixed_LISL, rtt_terrestrial, plusGrid, load_factor):
         """
         Calcolo dell'RTT per più città con un LISL_range fisso.
         """
+        desktop_folder = os.path.join(os.path.expanduser("~"), "Desktop", "MyPlots2")
+        os.makedirs(desktop_folder, exist_ok=True)
+
+        ts = load.timescale()
+        current_start_time = ts.now()  # Inizia dalla ora corrente
+
+        avg_rtt_list = []
+
+        n_simulations = 10  # minuti di simulazione ogni minuto
 
         for city2_name, city2, E_to_W in cities:
+            self.dh.reset_rtt_values()
+
             print(f"\nTest con LISL {fixed_LISL} km tra {city1_name} e {city2_name}")
 
-            tracker = SatelliteTracker(city1, city2, E_to_W)
-            satellites = tracker.filter_satellites()
+            for i in range(0, n_simulations):
+                tracker = SatelliteTracker(city1, city2, current_start_time, E_to_W)
+                satellites = tracker.filter_satellites()
 
-            print(f"Satelliti validi dentro il range: {len(satellites)}")
+                print(f"Satelliti validi dentro il range: {len(satellites)}")
 
-            sat_graph = SatelliteGraph(fixed_LISL)
-            sat_graph.add_nodes(satellites)
-            sat_graph.connect_nodes()
-
-            print(f"Numero di nodi: {sat_graph.get_graph().number_of_nodes()}"
-                  f"\nNumero di archi: {sat_graph.get_graph().number_of_edges()}")
+                sat_graph = SatelliteGraph(fixed_LISL)
+                sat_graph.add_nodes(satellites)
 
 
-            start_node = tracker.find_satellite_more_close(city1.latitude.degrees, city1.longitude.degrees, satellites)
-            end_node = tracker.find_satellite_more_close(city2.latitude.degrees, city2.longitude.degrees, satellites)
+                if plusGrid:
+                    print("Connessione con topologia +Grid")
+                    sat_graph.connect_nodes_hybrid()
+                else:
+                    print("Connessione con topologia libera")
+                    sat_graph.connect_nodes()
 
 
-            print(f"Satellite più vicino a {city1_name}: {start_node[0]}"
-                  f"\nSatellite più vicino a {city2_name}: {end_node[0]}")
+                print(f"Numero di nodi: {sat_graph.get_graph().number_of_nodes()}"
+                      f"\nNumero di archi: {sat_graph.get_graph().number_of_edges()}")
 
-            shortest_path = sat_graph.find_shortest_path_Dijkstra(start_node[0], end_node[0])
-            if shortest_path:
-                print("Il percorso più breve è:", shortest_path)
 
-            load_factor=0
-            latency = sat_graph.calculate_total_latency(shortest_path, city1, city2, load_factor)
-            rtt = 2 * latency * 1000 + (len(shortest_path) * 2)
+                start_node = tracker.find_satellite_more_close(city1.latitude.degrees, city1.longitude.degrees, satellites)
+                end_node = tracker.find_satellite_more_close(city2.latitude.degrees, city2.longitude.degrees, satellites)
 
-            print(f"RTT: {rtt:.3f} ms")
 
-            self.dh.add_rtt_value(rtt)
+                print(f"Satellite più vicino a {city1_name}: {start_node[0]}"
+                      f"\nSatellite più vicino a {city2_name}: {end_node[0]}")
+
+                # Calcola il percorso più breve con dijkstra
+                shortest_path_dijkstra, _ = sat_graph.find_shortest_path_Dijkstra(start_node[0], end_node[0])
+                if shortest_path_dijkstra:
+                    print("Il percorso più breve è:", shortest_path_dijkstra)
+
+                print("Fattore di carico: ", load_factor)
+                if shortest_path_dijkstra is not None:
+                    latency = sat_graph.calculate_total_latency(shortest_path_dijkstra, city1, city2, load_factor)
+                    rtt = 2 * latency * 1000 + (len(shortest_path_dijkstra) * 2)
+
+                    print(f"RTT: {rtt:.3f} ms")
+                else:
+                    print("Percorso non trovato")
+                    rtt = 0
+
+                self.dh.add_rtt_value(rtt)
+                current_start_time += timedelta(minutes=1)
+
+            avg_rtt = sum(self.dh.get_rtt_values()) / n_simulations
+            print(f"RTT medio tra {city1_name} e {city2_name}: {avg_rtt:.3f} ms")
+            avg_rtt_list.append(avg_rtt)
 
         # Generazione grafico
-        self.pg.plot_latency_every_cities([c[0] for c in cities], self.dh.get_rtt_values())
+        self.dh.save_rtt_values_table_to_csv([c[0] for c in cities], avg_rtt_list, rtt_terrestrial)
+        self.pg.plot_latency_every_cities_vs_terrestrial([c[0] for c in cities], avg_rtt_list, rtt_terrestrial, plusGrid)

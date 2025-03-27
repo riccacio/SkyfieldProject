@@ -7,7 +7,7 @@ from collections import defaultdict
 
 class SatelliteTracker:
 
-    def __init__(self, city1, city2, E_to_W, tle_file="gp.php"):
+    def __init__(self, city1, city2, start_time, E_to_W, tle_file="gp.php"):
         # Carica i TLE (puoi usare anche l'URL se preferisci)
         tle_url = "https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=tle"
         self.ts = load.timescale()
@@ -29,16 +29,14 @@ class SatelliteTracker:
             if self.city2_lon < 0:
                 self.city2_lon += 360
 
-        offset = 10
+        offset = 20
         self.min_lat = min(self.city1_lat, self.city2_lat) - offset
-        self.max_lat = max(self.city1_lat, self.city2_lat) + offset
+        self.max_lat = max(self.city1_lat, self.city2_lat) + offset+10
         self.min_lon = min(self.city1_lon, self.city2_lon) - offset
-        self.max_lon = max(self.city1_lon, self.city2_lon) + offset+10
-
-        print(f"max lon {self.max_lon}")
+        self.max_lon = max(self.city1_lon, self.city2_lon) + offset
 
         # Intervallo di tempo per la traccia
-        self.start_time = self.ts.now()
+        self.start_time = start_time
         self.end_time = self.start_time + timedelta(minutes=1)
 
         self.satellite_validated = []
@@ -87,46 +85,29 @@ class SatelliteTracker:
         return self.satellite_validated
 
     def assign_plane_and_position(self, angle_threshold=10):
-        """
-        Aggiunge a ciascun satellite in self.satellite_validated:
-          - plane_index: ottenuto dividendo il RAAN per angle_threshold
-          - sat_index_in_plane: indice assegnato ordinando i satelliti all'interno dello stesso piano
-        """
-        # 1) Calcola plane_index per ogni satellite
+
         for sat in self.satellite_validated:
-            # Il RAAN in gradi è memorizzato in sat['plane']
             sat['plane_index'] = int(sat['plane'] // angle_threshold)
 
-        # 2) Raggruppa per plane_index
         plane_dict = defaultdict(list)
         for sat in self.satellite_validated:
             plane_dict[sat['plane_index']].append(sat)
 
-        # 3) All'interno di ciascun piano, ordina i satelliti e assegna sat_index_in_plane
         for p_idx, sat_list in plane_dict.items():
             # Ordina per latitudine media calcolata dal track
             for sat in sat_list:
                 lat_values = [pos[0] for pos in sat['track']]
-                mean_lat = sum(lat_values) / len(lat_values)
-                sat['mean_lat'] = mean_lat
+                mid_lat = sum(lat_values) / len(lat_values)
+                sat['mid_lat'] = mid_lat
 
-            sat_list.sort(key=lambda x: x['mean_lat'])
+            sat_list.sort(key=lambda x: x['mid_lat'])
             for i, sat in enumerate(sat_list):
                 sat['sat_index_in_plane'] = i
-
-    def compute_orbital_plane(self, sat, angle_threshold=10):
-        # Esempio: il RAAN è nei caratteri 9-16 (indice 8:16) della seconda linea del TLE
-        try:
-            raan = float  # Metodo non implementato: usare sat.model.nodeo
-        except Exception as e:
-            raise ValueError(f"Impossibile estrarre il RAAN per {sat.name}: {e}")
-        # Calcola l'ID del piano orbitale (approssimato)
-        return int(raan // angle_threshold)
 
     def find_satellite_more_close(self, city_lat, city_lon, satellites):
         """
         Trova il satellite la cui posizione media (calcolata dal track) è la più vicina
-        al punto (city_lat, city_lon). Usa la distanza euclidea 3D (euclidean_distance).
+        al punto (city_lat, city_lon). Usa la distanza euclidea 3D.
         """
         min_distance = float('inf')
         node = None

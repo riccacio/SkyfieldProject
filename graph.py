@@ -2,6 +2,8 @@ from collections import defaultdict
 
 import networkx as nx
 from skyfield.toposlib import Topos
+
+import utils
 from utils import haversine, calculate_capacity
 from utils import haversine_with_altitude
 from utils import latency_calculation
@@ -73,7 +75,7 @@ class SatelliteGraph:
         for p_idx in plane_dict:
             plane_dict[p_idx].sort(key=lambda x: x[1].get('sat_index_in_plane', 0))
 
-        # Ottieni la lista dei piani ordinati
+        # ordino la lista dei piani
         all_planes = sorted(plane_dict.keys())
 
         # Per ogni piano, collega:
@@ -153,20 +155,26 @@ class SatelliteGraph:
     def find_shortest_path_Dijkstra(self, start_node, end_node):
         try:
             # Calcola il cammino minimo basato sul peso degli archi (distanze)
-            path = nx.dijkstra_path(self.G, source=start_node, target=end_node, weight='distance')
-            print(f"Numero di Hop: {len(path) - 1}")
-            return path
+            path = nx.dijkstra_path(self.G, source=start_node, target=end_node, weight='weight')
+            # Calcola la distanza totale lungo il percorso
+            total_distance = sum(self.G[path[i]][path[i + 1]]['weight'] for i in range(len(path) - 1))
+            print(f"Numero di Hop: {len(path) - 1} - Distanza Totale: {total_distance}")
+            return path, total_distance
         except nx.NetworkXNoPath:
             print("Nessun percorso trovato tra", start_node, "e", end_node)
         except KeyError:
             print("Uno o entrambi i nodi non esistono nel grafo")
 
+
     def find_shortest_path_minHop(self, start_node, end_node):
         try:
-            # Se non inserisco un peso, mi calcola il bfs
+            # Calcola il cammino minimo in termini di hop (BFS)
             path = nx.shortest_path(self.G, source=start_node, target=end_node)
-            print(f"Numero di Hop: {len(path) - 1}")
-            return path
+            #path = utils.bfs_min_hop_path(self.G, start_node, end_node)
+            if path is not None:
+                total_distance = sum(self.G[path[i]][path[i + 1]]['weight'] for i in range(len(path) - 1))
+                print(f"Numero di Hop: {len(path) - 1} - Distanza Totale: {total_distance}")
+            return path, total_distance
         except nx.NetworkXNoPath:
             print("Nessun percorso trovato tra", start_node, "e", end_node)
         except KeyError:

@@ -4,74 +4,133 @@ import matplotlib.pyplot as plt
 
 class DataHandler:
     def __init__(self):
-        self.results = []
-        self.rtt_list = []
-        self.half_rtt_list = []
-        self.throughput_downlink_list = []
-        self.throughput_uplink_list = []
-        self.throughput_isl_list = []
+        self.results = []  # risultati per ogni simulazione (valori singoli)
+        self.avg_results = []  # risultati medi aggregati per ogni valore di LISL_range
 
-    def add_result(self, city1, city2, LISL_range, n_hop, half_rtt, rtt,
-                   throughput_downlink, throughput_uplink, throughput_isl):
+        self.rtt_d_list = []
+        self.rtt_m_list = []
+        self.half_rtt_d_list = []
+        self.half_rtt_m_list = []
+        self.n_hops_d_list = []
+        self.n_hops_m_list = []
+        self.distance_d_list = []
+        self.distance_m_list = []
 
-        result = {
+        self.avg_rtt_d_list = []
+        self.avg_half_rtt_d_list = []
+        self.avg_rtt_m_list = []
+        self.avg_half_rtt_m_list = []
+        self.avg_n_hops_d_list = []
+        self.avg_n_hops_m_list = []
+        self.avg_distance_d_list = []
+        self.avg_distance_m_list = []
+
+
+    def add_result(self, n_hop_d, n_hop_m, half_rtt_d, rtt_d, half_rtt_m, rtt_m, distance_d,
+                   distance_m):
+
+        self.rtt_d_list.append(rtt_d)
+        self.rtt_m_list.append(rtt_m)
+        self.half_rtt_d_list.append(half_rtt_d)
+        self.half_rtt_m_list.append(half_rtt_m)
+        self.n_hops_d_list.append(n_hop_d)
+        self.n_hops_m_list.append(n_hop_m)
+        self.distance_d_list.append(distance_d)
+        self.distance_m_list.append(distance_m)
+
+
+    def reset_avg_values(self):
+        self.rtt_d_list = []
+        self.rtt_m_list = []
+        self.half_rtt_d_list = []
+        self.half_rtt_m_list = []
+        self.n_hops_d_list = []
+        self.n_hops_m_list = []
+        self.distance_d_list = []
+        self.distance_m_list = []
+
+    def reset_rtt_values(self):
+        self.rtt_d_list = []
+
+    def add_avg_result(self, city1, city2, LISL_range, avg_n_hop_d, avg_n_hop_m,
+                       avg_rtt_d, avg_rtt_m, avg_half_rtt_d, avg_half_rtt_m,
+                       avg_distance_d, avg_distance_m):
+
+        avg_result = {
             "City1": city1,
             "City2": city2,
             "LISL_range": LISL_range,
-            "n_hop": n_hop,
-            "RTT/2 (s)": half_rtt,
-            "RTT (s)": rtt,
-            "Throughput Downlink (Gbps)": throughput_downlink,
-            "Throughput Uplink (Gbps)": throughput_uplink,
-            "Throughput ISL (Gbps)": throughput_isl
+            "N. hop Dijkstra": avg_n_hop_d,
+            "N. hop MinHops": avg_n_hop_m,
+            "RTT medio (ms) Dijkstra": avg_rtt_d,
+            "RTT medio (ms) MinHops": avg_rtt_m,
+            "RTT/2 (ms) Dijkstra": avg_half_rtt_d,
+            "RTT/2 (ms) MinHops": avg_half_rtt_m,
+            "Distance totale media Dijkstra": avg_distance_d,
+            "Distance totale media MinHops": avg_distance_m
         }
+        self.avg_results.append(avg_result)
+        self.avg_half_rtt_d_list.append(avg_half_rtt_d)
+        self.avg_half_rtt_m_list.append(avg_half_rtt_m)
+        self.avg_rtt_d_list.append(avg_rtt_d)
+        self.avg_rtt_m_list.append(avg_rtt_m)
+        self.avg_n_hops_d_list.append(avg_n_hop_d)
+        self.avg_n_hops_m_list.append(avg_n_hop_m)
+        self.avg_distance_d_list.append(avg_distance_d)
+        self.avg_distance_m_list.append(avg_distance_m)
 
-        self.rtt_list.append(rtt)
-        self.half_rtt_list.append(half_rtt)
-        self.throughput_downlink_list.append(throughput_downlink)
-        self.throughput_uplink_list.append(throughput_uplink)
-        self.throughput_isl_list.append(throughput_isl)
-        self.results.append(result)
 
 
     def add_rtt_value(self, value):
-        self.rtt_list.append(value)
+        self.rtt_d_list.append(value)
 
     def get_rtt_values(self):
-        return self.rtt_list
+        return self.rtt_d_list
+
+    def get_results_lists(self):
+        return (self.rtt_d_list, self.half_rtt_d_list,
+                self.rtt_m_list, self.half_rtt_m_list,
+                self.n_hops_d_list, self.n_hops_m_list,
+                self.distance_d_list, self.distance_m_list)
 
     def save_results_to_csv(self, filename):
-        """
-        Salva i risultati in un file CSV.
-        Se il file non esiste, viene scritta anche l'intestazione.
-        """
         file_exists = os.path.exists(filename)
         with open(filename, "a", newline="") as f:
             writer = csv.writer(f)
             if not file_exists:
-                # Scrive l'header
                 writer.writerow([
-                    "City1", "City2", "LISL_range", "Numero di hop",
-                    "RTT/2 (s)", "RTT (s)",
-                    "Throughput Downlink (Gbps)",
-                    "Throughput Uplink (Gbps)",
-                    "Throughput ISL (Gbps)"
+                    "City1", "City2", "LISL_range",
+                    "Numero di salti (Dijkstra)", "Numero di salti (Min-hop)",
+                    "RTT medio (ms) (Dijkstra)", "RTT medio (ms) (Min-hop)",
+                    "RTT/2 (ms) (Dijkstra)", "RTT/2 (ms) (Min-hop)",
+                    "Distanza totale media (Dijkstra)", "Distanza totale media (Min-hop)"
                 ])
-            for res in self.results:
+            # Scrive una riga per ogni risultato medio salvato
+            for res in self.avg_results:
                 writer.writerow([
                     res["City1"],
                     res["City2"],
                     res["LISL_range"],
-                    res["n_hop"],
-                    res["RTT/2 (s)"],
-                    res["RTT (s)"],
-                    res["Throughput Downlink (Gbps)"],
-                    res["Throughput Uplink (Gbps)"],
-                    res["Throughput ISL (Gbps)"]
+                    res["N. hop Dijkstra"],
+                    res["N. hop MinHops"],
+                    res["RTT medio (ms) Dijkstra"],
+                    res["RTT medio (ms) MinHops"],
+                    res["RTT/2 (ms) Dijkstra"],
+                    res["RTT/2 (ms) MinHops"],
+                    res["Distance totale media Dijkstra"],
+                    res["Distance totale media MinHops"]
                 ])
 
-    def get_results_lists(self):
-        return self.rtt_list, self.half_rtt_list, self.throughput_downlink_list, self.throughput_uplink_list, self.throughput_isl_list
+    def save_rtt_values_table_to_csv(self, city_names, satellite_rtt_list, terrestrial_rtt, filename="rtt_values.csv"):
+        with open(filename, "w", newline="") as f:
+            writer = csv.writer(f)
+            # Scrittura dell'header
+            writer.writerow(["City", "RTT Terrestre (ms)", "RTT Satellitare (ms)", "Gap (ms)"])
+            # Per ogni città, salva la riga con i dati
+            for i, city in enumerate(city_names):
+                sat_rtt = satellite_rtt_list[i]
+                gap = sat_rtt - terrestrial_rtt[i]
+                writer.writerow([city, terrestrial_rtt[i], sat_rtt, gap])
 
 
     def save_graph_to_csv(graph):

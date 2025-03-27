@@ -1,4 +1,6 @@
 import numpy as np
+
+
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371  # Raggio medio della Terra in km
     lat1, lon1, lat2, lon2 = map(np.radians, [lat1, lon1, lat2, lon2])
@@ -65,5 +67,3 @@ def calculate_capacity(P_t, G, lambda_, d, B):
     SNR = P_r / noise  # Rapporto segnale-rumore 0,97db al km parte loss + attenuazione atmosferica, caso peggiore 185dB tutta la tratta
     C = B * np.log2(1 + SNR)
     return C / 1e9  # Convertito in Gbps
-
-

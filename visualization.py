@@ -10,12 +10,15 @@ import data_handler
 
 class SatelliteVisualization:
 
-    def __init__(self, city1_name, city2_name, city1, city2, graph, satellite_validated, start, end, E_to_W, fullscreen):
+    def __init__(self, city1_name, city2_name, city1, city2, graph, satellite_validated, start, end, E_to_W, fullscreen, plusGrid):
+        plt.figure(figsize=(14, 6))
+
         self.graph = graph
         self.satellite_validated = satellite_validated
         self.start = start
         self.end = end
         self.E_to_W = E_to_W
+        self.plusGrid = plusGrid
 
         self.city1_name = city1_name
         self.city2_name = city2_name
@@ -33,12 +36,12 @@ class SatelliteVisualization:
                 self.city2_lon += 360
 
         # Offset per latitudine e longitudine
-        offset_lat = 10
-        offset_lon = 20
+        offset_lat = 30
+        offset_lon = 30
 
         # Calcola i limiti della mappa
-        llcrnrlat = min(self.city1_lat, self.city2_lat) - offset_lat-10
-        urcrnrlat = max(self.city1_lat, self.city2_lat) + offset_lat
+        llcrnrlat = min(self.city1_lat, self.city2_lat) - offset_lat
+        urcrnrlat = max(self.city1_lat, self.city2_lat) + offset_lat-10
         llcrnrlon = min(self.city1_lon, self.city2_lon) - offset_lon
         urcrnrlon = max(self.city1_lon, self.city2_lon) + offset_lon
 
@@ -83,8 +86,14 @@ class SatelliteVisualization:
 
         self.m.drawparallels(parallels, labels=[True, False, False, False],
                              color='lightgray', linewidth=0.5)
-        self.m.drawmeridians(meridians, labels=[False, False, False, True],
+        mer_dict = self.m.drawmeridians(meridians, labels=[False, False, False, True],
                              color='lightgray', linewidth=0.5)
+
+        # ruota le etichette di longitudine
+        for (_, text) in mer_dict.values():
+            for lbl in text:
+                lbl.set_rotation(45)
+                lbl.set_horizontalalignment('right')
 
     def plot_tracks(self):
         """
@@ -101,7 +110,6 @@ class SatelliteVisualization:
         Disegna i nodi del grafo (satelliti), colorando diversamente
         quelli di start, end e quelli sul cammino minimo.
         """
-        plotted_node_first = False
         for node, data in self.graph.nodes(data=True):
             x, y = self.m(data['lon'], data['lat'])
 
@@ -109,12 +117,6 @@ class SatelliteVisualization:
                 self.m.plot(x, y, marker='o', color='red', markersize=6, label='Source')
             elif node == self.end[0]:
                 self.m.plot(x, y, marker='o', color='purple', markersize=6, label='Destination')
-            elif path and node in path:
-                if not plotted_node_first:
-                    self.m.plot(x, y, marker='o', color='black', markersize=6, label='Satellites in shortest path')
-                    plotted_node_first = True
-                else:
-                    self.m.plot(x, y, marker='o', color='black', markersize=6)
             else:
                 self.m.plot(x, y, marker='o', color='blue', markersize=4)
 
@@ -132,7 +134,7 @@ class SatelliteVisualization:
         x_city2, y_city2 = self.m(self.city2_lon, self.city2_lat)
 
         # Lista di percorsi da plottare con il colore associato
-        paths = [(path_d, 'cyan'), (path_m, 'magenta')]
+        paths = [(path_d, 'cyan'), (path_m, 'lime')]
 
         for path, color in paths:
             if path is None or len(path) == 0:
@@ -145,10 +147,6 @@ class SatelliteVisualization:
             last_node = self.graph.nodes[last_sat]
             x_first, y_first = self.m(first_node['lon'], first_node['lat'])
             x_last, y_last = self.m(last_node['lon'], last_node['lat'])
-
-            self.m.plot([x_city1, x_first], [y_city1, y_first], color='lime', linewidth=3,
-                        label='City-Satellite Connection')
-            self.m.plot([x_city2, x_last], [y_city2, y_last], color='lime', linewidth=3)
 
             # Flag per plottare l'etichetta del percorso una sola volta
             plotted_label = False
@@ -168,11 +166,9 @@ class SatelliteVisualization:
                     else:
                         self.m.plot([x1, x2], [y1, y2], color=color, linewidth=3)
                 else:
-                    # Disegna gli archi che non fanno parte del percorso con un colore sottile, ma solo se il range_value è 659.5
-                    if range_value == 659.5:
-                        self.m.plot([x1, x2], [y1, y2], color='red', linewidth=0.1)
+                    self.m.plot([x1, x2], [y1, y2], color='red', linewidth=0.1)
 
-        # (Eventualmente, se vuoi anche disegnare tutti gli archi in rosso per contesto, puoi farlo dopo)
+
         for u, v, data in self.graph.edges(data=True):
             node1 = self.graph.nodes[u]
             node2 = self.graph.nodes[v]
@@ -181,8 +177,12 @@ class SatelliteVisualization:
             self.m.plot([x1, x2], [y1, y2], color='red', linewidth=0.1)
 
     def show(self, save_as_png=False):
-        plt.title("Tracce dei satelliti e connessioni")
-        #plt.legend(loc='lower right', fontsize=10)
+        if self.plusGrid:
+            plt.title("Mappa dei satelliti con topologia +Grid")
+        else:
+            plt.title("Mappa dei satelliti con topologia libera")
+
+        plt.legend(loc='lower right', fontsize=10)
         if save_as_png:
             data_handler.DataHandler.save_map_as_png("satellite_map.png")
         else:

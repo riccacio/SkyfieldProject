@@ -1,0 +1,23 @@
+# Parametri dei segnali
+params = {
+    "P_t_laser": 1, "G_laser": 80, "lambda_laser": 1.55e-6, "B_laser": 80e9,
+    "P_t_ku": 50, "G_ku_dBi": 45, "lambda_ku": 0.0214, "B_ku": 13e9,
+    "P_t_ka": 30, "G_ka_dBi": 50, "lambda_ka": 0.011, "B_ka": 20e9
+}
+
+# converto i guadagni
+params["G_ku"] = 10 ** (params["G_ku_dBi"] / 10)
+params["G_ka"] = 10 ** (params["G_ka_dBi"] / 10)
+params["G_laser"] = 10 ** (params["G_laser"] / 10)
+
+downlink_ka, uplink_ku, isl_laser = sat_graph.calculate_total_throughput(
+    shortest_path, city1, city2, load_factor,
+    params["P_t_laser"], params["G_laser"], params["lambda_laser"], params["B_laser"],
+    params["P_t_ka"], params["G_ka"], params["lambda_ka"], params["B_ka"],
+    params["P_t_ku"], params["G_ku"], params["lambda_ku"], params["B_ku"]
+)
+
+
+self.dh.add_result(city1_name, city2_name, range_value, len(shortest_path), half_rtt, rtt,
+              downlink_ka, uplink_ku, isl_laser)
+
