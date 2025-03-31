@@ -37,7 +37,7 @@ class SatelliteTracker:
 
         # Intervallo di tempo per la traccia
         self.start_time = start_time
-        self.end_time = self.start_time + timedelta(minutes=1)
+        self.end_time = self.start_time + timedelta(minutes=5)
 
         self.satellite_validated = []
 

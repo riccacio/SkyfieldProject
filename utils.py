@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -67,3 +68,9 @@ def calculate_capacity(P_t, G, lambda_, d, B):
     SNR = P_r / noise  # Rapporto segnale-rumore 0,97db al km parte loss + attenuazione atmosferica, caso peggiore 185dB tutta la tratta
     C = B * np.log2(1 + SNR)
     return C / 1e9  # Convertito in Gbps
+
+
+def round_sig(x, sig=3):
+    if x == 0:
+        return 0
+    return round(x, sig - int(math.floor(math.log10(abs(x)))) - 1)

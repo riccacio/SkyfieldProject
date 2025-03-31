@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import seaborn as sns
 
 from data_handler import DataHandler
 
@@ -17,26 +19,22 @@ class PlotGenerator:
 
         plt.figure(figsize=(10, 6))
 
-        # Colonne per Dijkstra
-        plt.bar(x - width * 1.5, dh.avg_half_rtt_d_list, width,
+        # Solo colonne per RTT/2
+        plt.bar(x - width / 2, dh.avg_half_rtt_d_list, width,
                 label='RTT/2 Dijkstra', color='blue')
-        plt.bar(x - width / 2, dh.avg_rtt_d_list, width,
-                label='RTT Dijkstra', color='lightblue')
-
-        # Colonne per MinHops
         plt.bar(x + width / 2, dh.avg_half_rtt_m_list, width,
-                label='RTT/2 MinHops', color='red')
-        plt.bar(x + width * 1.5, dh.avg_rtt_m_list, width,
-                label='RTT MinHops', color='salmon')
+                label='RTT/2 MinHops', color='orange')
 
         plt.xlabel("Range LISL (km)")
         plt.ylabel("Latenza (ms)")
         if plusGrid:
-            plt.title("(+Grid) Confronto delle latenze RTT e RTT/2 medie per Dijkstra e MinHops\nal variare del range del laser")
+            plt.title(
+                "(+Grid) Confronto delle latenze RTT/2 medie per Dijkstra e MinHops\nal variare del range del laser")
         else:
-            plt.title("(NO +Grid) Confronto delle latenze RTT e RTT/2 medie per Dijkstra e MinHops\nal variare del range del laser")
+            plt.title(
+                "(NO +Grid) Confronto delle latenze RTT/2 medie per Dijkstra e MinHops\nal variare del range del laser")
 
-        plt.xticks(x, LISL_range)  # se LISL_range è già una lista di valori (o stringhe), basta usarla direttamente
+        plt.xticks(x, LISL_range)
         plt.legend()
         plt.grid(axis='y', linestyle='--', alpha=0.7)
         plt.tight_layout()
@@ -113,10 +111,10 @@ class PlotGenerator:
         plt.figure(figsize=(12, 6))
 
         # RTT Terrestre (arancione)
-        plt.bar(x - width / 2, rtt_terrestrial, width=width, color='orange', label='RTT Terrestre')
+        plt.bar(x - width / 2, rtt_terrestrial, width=width, color='grey', label='RTT Terrestre')
 
         # RTT Satellitare (verde)
-        plt.bar(x + width / 2, rtt_list, width=width, color='green', label='RTT Satellitare')
+        plt.bar(x + width / 2, rtt_list, width=width, color='lightblue', label='RTT Satellitare')
 
         # Personalizzazione etichette e titolo
         plt.xlabel("Città")
@@ -131,4 +129,62 @@ class PlotGenerator:
         plt.tight_layout()  # Aggiusta automaticamente gli spazi
 
         # Mostra il grafico
+        plt.show()
+
+    def plot_violin_distance_distribution(self, dh):
+        """
+        Crea due violin plot separati per la distribuzione delle distanze totali:
+        uno per Dijkstra e uno per MinHops, con il plot di MinHops colorato in magenta.
+        """
+        # Raccogli i dati per ogni algoritmo
+        dijkstra_data = {}
+        minhop_data = {}
+
+        for d in dh.dict_results_d:
+            r = d["Range"]
+            if r not in dijkstra_data:
+                dijkstra_data[r] = []
+            dijkstra_data[r].append(d["Distance"])
+
+        for m in dh.dict_results_m:
+            r = m["Range"]
+            if r not in minhop_data:
+                minhop_data[r] = []
+            minhop_data[r].append(m["Distance"])
+
+        # Ordina i range per coerenza visiva
+        sorted_ranges = sorted(set(dijkstra_data.keys()) | set(minhop_data.keys()))
+
+        # --- Grafico Dijkstra ---
+        dijkstra_values = [dijkstra_data[r] for r in sorted_ranges]
+        dijkstra_labels = [str(r) for r in sorted_ranges]
+
+        plt.figure(figsize=(10, 5))
+        parts = plt.violinplot(dijkstra_values, showmeans=False, showextrema=True, showmedians=True)
+        plt.xticks(range(1, len(dijkstra_labels) + 1), dijkstra_labels)
+        plt.title("Distribuzione Distanze Totali - Dijkstra")
+        plt.xlabel("Range del Laser (km)")
+        plt.ylabel("Distanza Totale (km)")
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
+
+        # --- Grafico MinHops ---
+        minhop_values = [minhop_data[r] for r in sorted_ranges]
+        minhop_labels = [str(r) for r in sorted_ranges]
+
+        plt.figure(figsize=(10, 5))
+        parts = plt.violinplot(minhop_values, showmeans=False, showextrema=True, showmedians=True)
+
+        # Imposta il colore magenta per i corpi delle violin plot
+        for pc in parts['bodies']:
+            pc.set_facecolor('orange')
+            pc.set_alpha(0.5)  # Imposta la trasparenza se desiderato
+
+        plt.xticks(range(1, len(minhop_labels) + 1), minhop_labels)
+        plt.title("Distribuzione Distanze Totali - MinHops")
+        plt.xlabel("Range del Laser (km)")
+        plt.ylabel("Distanza Totale (km)")
+        plt.grid(True)
+        plt.tight_layout()
         plt.show()

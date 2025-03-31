@@ -2,6 +2,9 @@ import csv
 import os
 import matplotlib.pyplot as plt
 
+import utils
+
+
 class DataHandler:
     def __init__(self):
         self.results = []  # risultati per ogni simulazione (valori singoli)
@@ -26,17 +29,35 @@ class DataHandler:
         self.avg_distance_m_list = []
 
 
-    def add_result(self, n_hop_d, n_hop_m, half_rtt_d, rtt_d, half_rtt_m, rtt_m, distance_d,
+        self.dict_results_d = []
+        self.dict_results_m = []
+
+        self.dict_distance_d = {}
+        self.dict_distance_m = {}
+
+
+    def add_result(self, range, n_hop_d, n_hop_m, half_rtt_d, half_rtt_m, distance_d,
                    distance_m):
 
-        self.rtt_d_list.append(rtt_d)
-        self.rtt_m_list.append(rtt_m)
         self.half_rtt_d_list.append(half_rtt_d)
         self.half_rtt_m_list.append(half_rtt_m)
         self.n_hops_d_list.append(n_hop_d)
         self.n_hops_m_list.append(n_hop_m)
         self.distance_d_list.append(distance_d)
         self.distance_m_list.append(distance_m)
+
+        self.dict_distance_d = {
+            "Range": range,
+            "Distance" : distance_d
+        }
+
+        self.dict_distance_m = {
+            "Range": range,
+            "Distance": distance_m
+        }
+
+        self.dict_results_d.append(self.dict_distance_d)
+        self.dict_results_m.append(self.dict_distance_m)
 
 
     def reset_avg_values(self):
@@ -53,32 +74,27 @@ class DataHandler:
         self.rtt_d_list = []
 
     def add_avg_result(self, city1, city2, LISL_range, avg_n_hop_d, avg_n_hop_m,
-                       avg_rtt_d, avg_rtt_m, avg_half_rtt_d, avg_half_rtt_m,
+                       avg_half_rtt_d, avg_half_rtt_m,
                        avg_distance_d, avg_distance_m):
 
         avg_result = {
             "City1": city1,
             "City2": city2,
             "LISL_range": LISL_range,
-            "N. hop Dijkstra": avg_n_hop_d,
-            "N. hop MinHops": avg_n_hop_m,
-            "RTT medio (ms) Dijkstra": avg_rtt_d,
-            "RTT medio (ms) MinHops": avg_rtt_m,
-            "RTT/2 (ms) Dijkstra": avg_half_rtt_d,
-            "RTT/2 (ms) MinHops": avg_half_rtt_m,
-            "Distance totale media Dijkstra": avg_distance_d,
-            "Distance totale media MinHops": avg_distance_m
+            "N. hop Dijkstra": utils.round_sig(avg_n_hop_d, 3),
+            "N. hop MinHops": utils.round_sig(avg_n_hop_m, 3),
+            "RTT/2 (ms) Dijkstra": utils.round_sig(avg_half_rtt_d, 6),
+            "RTT/2 (ms) MinHops": utils.round_sig(avg_half_rtt_m, 6),
+            "Distance totale media Dijkstra": utils.round_sig(avg_distance_d, 6),
+            "Distance totale media MinHops": utils.round_sig(avg_distance_m, 6)
         }
         self.avg_results.append(avg_result)
         self.avg_half_rtt_d_list.append(avg_half_rtt_d)
         self.avg_half_rtt_m_list.append(avg_half_rtt_m)
-        self.avg_rtt_d_list.append(avg_rtt_d)
-        self.avg_rtt_m_list.append(avg_rtt_m)
         self.avg_n_hops_d_list.append(avg_n_hop_d)
         self.avg_n_hops_m_list.append(avg_n_hop_m)
         self.avg_distance_d_list.append(avg_distance_d)
         self.avg_distance_m_list.append(avg_distance_m)
-
 
 
     def add_rtt_value(self, value):
@@ -101,7 +117,6 @@ class DataHandler:
                 writer.writerow([
                     "City1", "City2", "LISL_range",
                     "Numero di salti (Dijkstra)", "Numero di salti (Min-hop)",
-                    "RTT medio (ms) (Dijkstra)", "RTT medio (ms) (Min-hop)",
                     "RTT/2 (ms) (Dijkstra)", "RTT/2 (ms) (Min-hop)",
                     "Distanza totale media (Dijkstra)", "Distanza totale media (Min-hop)"
                 ])
@@ -113,8 +128,6 @@ class DataHandler:
                     res["LISL_range"],
                     res["N. hop Dijkstra"],
                     res["N. hop MinHops"],
-                    res["RTT medio (ms) Dijkstra"],
-                    res["RTT medio (ms) MinHops"],
                     res["RTT/2 (ms) Dijkstra"],
                     res["RTT/2 (ms) MinHops"],
                     res["Distance totale media Dijkstra"],
@@ -130,6 +143,7 @@ class DataHandler:
             for i, city in enumerate(city_names):
                 sat_rtt = satellite_rtt_list[i]
                 gap = sat_rtt - terrestrial_rtt[i]
+                gap = utils.round_sig(gap, 5)
                 writer.writerow([city, terrestrial_rtt[i], sat_rtt, gap])
 
 
