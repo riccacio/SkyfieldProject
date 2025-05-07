@@ -1,8 +1,6 @@
-import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
-from skyfield.toposlib import Topos
 import data_handler
 from matplotlib.lines import Line2D  # per la legenda personalizzata
 
@@ -95,9 +93,7 @@ class SatelliteVisualization:
                 lbl.set_horizontalalignment('right')
 
     def plot_tracks(self):
-        """
-        Disegna le traiettorie dei satelliti validati (track).
-        """
+        # Disegna le traiettorie dei satelliti validati
         for sat in self.satellite_validated:
             track = sat['track']
             lats, lons, alt = zip(*track)
@@ -105,11 +101,7 @@ class SatelliteVisualization:
             self.m.plot(x, y, linewidth=1)
 
     def plot_nodes(self, path=None):
-        """
-        Disegna i nodi del grafo (satelliti).
-        I nodi di start e end sono evidenziati in rosso e viola.
-        Gli altri nodi (satelliti) sono disegnati in blu.
-        """
+        # Disegna i nodi del grafo (satelliti).
         for node, data in self.graph.nodes(data=True):
             x, y = self.m(data['lon'], data['lat'])
             if node == self.start[0]:
@@ -120,18 +112,13 @@ class SatelliteVisualization:
                 self.m.plot(x, y, marker='o', color='blue', markersize=4)
 
     def plot_edges(self, path_d, path_m, range_value, path_label="Percorso"):
-        """
-        Disegna gli archi del grafo per due percorsi (ad es. path_d e path_m)
-        sulla stessa mappa.
-          - Per ogni percorso, collega la città al primo e all'ultimo satellite.
-          - Gli archi che fanno parte dei percorsi vengono disegnati con linewidth=3 (per risaltare).
-          - Tutti gli altri archi vengono disegnati con linewidth=0.05.
-        """
+        # Disegna gli archi del grafo per entrambi i percorsi calcolati
+
         # Coordinate città trasformate
         x_city1, y_city1 = self.m(self.city1_lon, self.city1_lat)
         x_city2, y_city2 = self.m(self.city2_lon, self.city2_lat)
 
-        # Disegno le connessioni "di base" (non in percorso) con linewidth ridotto
+        # Disegno le connessioni tra nodi (non in percorso) con linewidth ridotto
         for u, v, data in self.graph.edges(data=True):
             node1 = self.graph.nodes[u]
             node2 = self.graph.nodes[v]
@@ -139,13 +126,13 @@ class SatelliteVisualization:
             x2, y2 = self.m(node2['lon'], node2['lat'])
             self.m.plot([x1, x2], [y1, y2], color='red', linewidth=0.2)
 
-        # Disegno i percorsi (route) in colori distinti
-        # (es. 'cyan' per Dijkstra, 'lime' per MinHops)
-        paths = [(path_d, 'cyan', 'Percorso Dijkstra'), (path_m, 'lime', 'Percorso MinHops')]
+
+        paths = [(path_d, 'cyan', 'Percorso Dijkstra'), (path_m, 'lime', 'Percorso MinHop')]
 
         for path, color, label in paths:
             if path is None or len(path) == 0:
                 continue  # Salta se il percorso non esiste
+
             # Collega città al primo e all'ultimo satellite del percorso
             first_sat = path[0]
             last_sat = path[-1]
@@ -153,6 +140,7 @@ class SatelliteVisualization:
             last_node = self.graph.nodes[last_sat]
             x_first, y_first = self.m(first_node['lon'], first_node['lat'])
             x_last, y_last = self.m(last_node['lon'], last_node['lat'])
+
             # Traccio il percorso con linewidth maggiore
             plotted_label = False
             for i in range(len(path) - 1):
@@ -171,11 +159,12 @@ class SatelliteVisualization:
     def show(self, save_as_png=False):
 
         legend_elements = [
-            # Città: usiamo i colori definiti in add_cities (magenta e green)
+            # Città
             Line2D([0], [0], marker='o', color='w', label='New York',
                    markerfacecolor='magenta', markersize=8),
             Line2D([0], [0], marker='o', color='w', label='Londra',
                    markerfacecolor='green', markersize=8),
+
             # Satellite: nodi generici in blu
             Line2D([0], [0], marker='o', color='w', label='Satellite',
                    markerfacecolor='blue', markersize=4),
@@ -186,10 +175,9 @@ class SatelliteVisualization:
                    markerfacecolor='purple', markersize=6),
             # Percorsi
             Line2D([0], [0], color='cyan', lw=3, label='Cammino Dijkstra'),
-            Line2D([0], [0], color='lime', lw=3, label='Cammino MinHops'),
+            Line2D([0], [0], color='lime', lw=3, label='Cammino MinHop'),
             # Collegamenti base (archi non in percorso)
-            Line2D([0], [0], color='red', lw=1, label='Archi')
-        ]
+            Line2D([0], [0], color='red', lw=1, label='Archi')]
 
         if self.plusGrid:
             plt.title("Mappa dei satelliti con topologia +Grid")

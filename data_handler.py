@@ -28,7 +28,6 @@ class DataHandler:
         self.avg_distance_d_list = []
         self.avg_distance_m_list = []
 
-
         self.dict_results_d = []
         self.dict_results_m = []
 
@@ -82,11 +81,11 @@ class DataHandler:
             "City2": city2,
             "LISL_range": LISL_range,
             "N. hop Dijkstra": utils.round_sig(avg_n_hop_d, 3),
-            "N. hop MinHops": utils.round_sig(avg_n_hop_m, 3),
+            "N. hop MinHop": utils.round_sig(avg_n_hop_m, 3),
             "RTT/2 (ms) Dijkstra": utils.round_sig(avg_half_rtt_d, 6),
-            "RTT/2 (ms) MinHops": utils.round_sig(avg_half_rtt_m, 6),
+            "RTT/2 (ms) MinHop": utils.round_sig(avg_half_rtt_m, 6),
             "Distance totale media Dijkstra": utils.round_sig(avg_distance_d, 6),
-            "Distance totale media MinHops": utils.round_sig(avg_distance_m, 6)
+            "Distance totale media MinHop": utils.round_sig(avg_distance_m, 6)
         }
         self.avg_results.append(avg_result)
         self.avg_half_rtt_d_list.append(avg_half_rtt_d)
@@ -127,11 +126,11 @@ class DataHandler:
                     res["City2"],
                     res["LISL_range"],
                     res["N. hop Dijkstra"],
-                    res["N. hop MinHops"],
+                    res["N. hop MinHop"],
                     res["RTT/2 (ms) Dijkstra"],
-                    res["RTT/2 (ms) MinHops"],
+                    res["RTT/2 (ms) MinHop"],
                     res["Distance totale media Dijkstra"],
-                    res["Distance totale media MinHops"]
+                    res["Distance totale media MinHop"]
                 ])
 
     def save_rtt_values_table_to_csv(self, city_names, satellite_rtt_list, terrestrial_rtt, filename="rtt_values.csv"):

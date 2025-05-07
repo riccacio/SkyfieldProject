@@ -1,11 +1,6 @@
 from collections import defaultdict
-
 import networkx as nx
-from skyfield.toposlib import Topos
 
-import utils
-from utils import haversine, calculate_capacity
-from utils import haversine_with_altitude
 from utils import latency_calculation
 from utils import euclidean_distance
 
@@ -19,7 +14,7 @@ class SatelliteGraph:
             # Calcola la latitudine e la longitudine media dal track
             mid_lat = (sat['track'][0][0] + sat['track'][-1][0]) / 2
             mid_lon = (sat['track'][0][1] + sat['track'][-1][1]) / 2
-            # L'orbital_plane è già memorizzato in sat['plane']
+            # L'orbital_plane è memorizzato in sat['plane']
             orbital_plane = sat.get('plane')
             plane_index = sat.get('plane_index', None)
             sat_index_in_plane = sat.get('sat_index_in_plane', None)
@@ -36,7 +31,7 @@ class SatelliteGraph:
             self.G.add_node(sat['name'], **sat_data)
 
     def _try_add_edge(self, node_a, node_b):
-        """Aggiunge un arco fra node_a e node_b se la distanza è entro LISL_range."""
+        # Aggiunge un arco fra node_a e node_b se la distanza è entro LISL_range
         if self.G.has_edge(node_a, node_b):
             return
         sat_a = self.G.nodes[node_a]
@@ -50,7 +45,7 @@ class SatelliteGraph:
 
     def _find_sat_by_index(self, sat_list, target_index):
         """
-        Dato un elenco di satelliti (tupla (node_name, attrs)) già ordinato,
+        Dato un elenco di satelliti (tupla (node_name, attrs)),
         restituisce il satellite con sat_index_in_plane uguale a target_index.
         """
         for node_name, attrs in sat_list:
@@ -61,17 +56,17 @@ class SatelliteGraph:
     def connect_nodes_plus_grid(self):
         """
         Collega i satelliti secondo la topologia “+Grid”:
-          - Connetti il satellite al successivo e al precedente nello stesso piano.
-          - Connetti il satellite a quello con lo stesso sat_index_in_plane nei piani adiacenti.
+          - Connette il satellite al successivo e al precedente nello stesso piano.
+          - Connette il satellite a quello con lo stesso sat_index_in_plane nei piani adiacenti.
         """
-        # Raggruppa i nodi per plane_index
+        # Raggruppo i nodi per plane_index
         plane_dict = defaultdict(list)
         for node_name, attrs in self.G.nodes(data=True):
             p_idx = attrs.get('plane_index')
             if p_idx is not None:
                 plane_dict[p_idx].append((node_name, attrs))
 
-        # Ordina i satelliti in ogni piano per sat_index_in_plane
+        # Ordino i satelliti in ogni piano per sat_index_in_plane
         for p_idx in plane_dict:
             plane_dict[p_idx].sort(key=lambda x: x[1].get('sat_index_in_plane', 0))
 
@@ -111,7 +106,7 @@ class SatelliteGraph:
         nodes = list(self.G.nodes())
         for node in nodes:
             if self.G.degree(node) < min_degree:
-                # Costruisci una lista di candidati (non già connessi) con distanza
+                # Costruisci una lista di candidati (non ancora connessi) con distanza
                 candidate_neighbors = []
                 for other in nodes:
                     if other == node or self.G.has_edge(node, other):
@@ -123,7 +118,7 @@ class SatelliteGraph:
                         sat_node['lat'], sat_node['lon'], sat_node['alt'],
                         sat_other['lat'], sat_other['lon'], sat_other['alt']
                     )
-                    # Permetti un range leggermente più ampio per i collegamenti extra
+                    # Aumento il range di poco per garantire una maggiore connessione
                     if d <= self.LISL_range * extra_range_factor:
                         candidate_neighbors.append((other, d))
                 # Ordina i candidati per distanza
@@ -132,7 +127,7 @@ class SatelliteGraph:
                 for candidate, d in candidate_neighbors:
                     if self.G.degree(node) >= min_degree:
                         break
-                    # Opzionale: puoi anche verificare che il candidato non abbia troppi collegamenti
+                    # Se ha meno di 4 collegamenti li aggiungo entro un range
                     if self.G.degree(candidate) < 4:
                         self.G.add_edge(node, candidate, weight=d)
 
@@ -148,7 +143,6 @@ class SatelliteGraph:
                 if distance <= self.LISL_range:
                     self.G.add_edge(nodes[i][0], nodes[j][0], weight=distance)
 
-
     def get_graph(self):
         return self.G
 
@@ -156,8 +150,8 @@ class SatelliteGraph:
         try:
             # Calcola il cammino minimo basato sul peso degli archi (distanze)
             path = nx.dijkstra_path(self.G, source=start_node, target=end_node, weight='weight')
-            # Calcola la distanza totale lungo il percorso
             total_distance = sum(self.G[path[i]][path[i + 1]]['weight'] for i in range(len(path) - 1))
+
             print(f"Numero di Hop: {len(path) - 1} - Distanza Totale: {total_distance}")
             return path, total_distance
         except nx.NetworkXNoPath:
@@ -168,9 +162,8 @@ class SatelliteGraph:
 
     def find_shortest_path_minHop(self, start_node, end_node):
         try:
-            # Calcola il cammino minimo in termini di hop (BFS)
+            # Calcola il cammino minimo in termini di hop
             path = nx.shortest_path(self.G, source=start_node, target=end_node)
-            #path = utils.bfs_min_hop_path(self.G, start_node, end_node)
             if path is not None:
                 total_distance = sum(self.G[path[i]][path[i + 1]]['weight'] for i in range(len(path) - 1))
                 print(f"Numero di Hop: {len(path) - 1} - Distanza Totale: {total_distance}")
@@ -181,9 +174,6 @@ class SatelliteGraph:
             print("Uno o entrambi i nodi non esistono nel grafo")
 
     def calculate_total_latency(self, path, city1, city2, load_factor):
-        """
-        Restituisce la latenza totale (one-way) in secondi.
-        """
         total_latency = 0
 
         if not path or len(path) < 2:
@@ -214,16 +204,14 @@ class SatelliteGraph:
                 raise ValueError(f"Arco non trovato tra {path[i]} e {path[i + 1]}")
 
         return total_latency
-
+"""
     def calculate_total_throughput(
             self, path, city1, city2, load_factor,
             P_t_laser, G_laser, lambda_laser, B_laser,
             P_t_ka, G_ka, lambda_ka, B_ka,
             P_t_ku, G_ku, lambda_ku, B_ku
     ):
-        """
-        Calcola e ritorna (throughput_downlink, throughput_uplink, throughput_ISL).
-        """
+       
         if not path or len(path) < 2:
             print("Il percorso deve contenere almeno due nodi.")
             return None
@@ -267,3 +255,4 @@ class SatelliteGraph:
         print(f"Throughput ISL Laser: {throughput_isl_laser:.3f} Gbps")
 
         return throughput_downlink_ka, throughput_uplink_ku, throughput_isl_laser
+"""

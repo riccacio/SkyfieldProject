@@ -1,17 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import seaborn as sns
-
-from data_handler import DataHandler
-
 
 class PlotGenerator:
     def __init__(self):
         pass
 
     def plot_latency(self, LISL_range, dh, plusGrid):
-        # Verifica che la lunghezza dei dati sia compatibile
         num_ranges = len(LISL_range)
 
         width = 0.2  # larghezza delle colonne
@@ -23,16 +17,16 @@ class PlotGenerator:
         plt.bar(x - width / 2, dh.avg_half_rtt_d_list, width,
                 label='RTT/2 Dijkstra', color='blue')
         plt.bar(x + width / 2, dh.avg_half_rtt_m_list, width,
-                label='RTT/2 MinHops', color='orange')
+                label='RTT/2 MinHop', color='orange')
 
         plt.xlabel("Range LISL (km)")
         plt.ylabel("Latenza (ms)")
         if plusGrid:
             plt.title(
-                "(+Grid) Confronto delle latenze RTT/2 medie per Dijkstra e MinHops\nal variare del range del laser")
+                "(+Grid) Confronto delle latenze RTT/2 medie per Dijkstra e MinHop\nal variare del range del laser")
         else:
             plt.title(
-                "(NO +Grid) Confronto delle latenze RTT/2 medie per Dijkstra e MinHops\nal variare del range del laser")
+                "(Libera) Confronto delle latenze RTT/2 medie per Dijkstra e MinHop\nal variare del range del laser")
 
         plt.xticks(x, LISL_range)
         plt.legend()
@@ -45,15 +39,15 @@ class PlotGenerator:
 
         # Grafico per Dijkstra
         plt.plot(LISL_range, dh.avg_distance_d_list, marker='o', label="Dijkstra")
-        # Grafico per MinHops
-        plt.plot(LISL_range, dh.avg_distance_m_list, marker='s', label="MinHops")
+        # Grafico per MinHop
+        plt.plot(LISL_range, dh.avg_distance_m_list, marker='s', label="MinHop")
 
         plt.xlabel("Range LISL (km)")
         plt.ylabel("Distanza Totale (km)")
         if plusGrid:
             plt.title("(+Grid) Confronto della Distanza Totale media del Percorso in funzione del Range LISL")
         else:
-            plt.title("(NO +Grid) Confronto della Distanza Totale media del Percorso in funzione del Range LISL")
+            plt.title("(Libera) Confronto della Distanza Totale media del Percorso in funzione del Range LISL")
         plt.legend()
         plt.grid(True, linestyle='--', alpha=0.7)
         plt.tight_layout()
@@ -64,30 +58,22 @@ class PlotGenerator:
 
         # Grafico per Dijkstra
         plt.plot(LISL_range, dh.avg_n_hops_d_list, marker='o', label="Dijkstra")
-        # Grafico per MinHops
-        plt.plot(LISL_range, dh.avg_n_hops_m_list, marker='s', label="MinHops")
+        # Grafico per MinHop
+        plt.plot(LISL_range, dh.avg_n_hops_m_list, marker='s', label="MinHop")
 
         plt.xlabel("Range LISL (km)")
         plt.ylabel("Numero di salti")
         if plusGrid:
             plt.title("(+Grid) Confronto del Numero di salti medi del Percorso in funzione del Range LISL")
         else:
-            plt.title("(NO +Grid) Confronto del Numero di salti medi del Percorso in funzione del Range LISL")
+            plt.title("(Libera) Confronto del Numero di salti medi del Percorso in funzione del Range LISL")
         plt.legend()
         plt.grid(True, linestyle='--', alpha=0.7)
         plt.tight_layout()
         plt.show()
-
+    """
     def plot_throughput(self, lisl_range_list, throughput_downlink_list, throughput_uplink_list, throughput_isl_list):
-        """
-        Disegna un grafico del throughput in funzione del LISL_range.
 
-        Parametri:
-          - lisl_range_list: lista dei valori di LISL_range (asse x)
-          - throughput_downlink_list: lista dei throughput downlink (Gbps)
-          - throughput_uplink_list: lista dei throughput uplink (Gbps)
-          - throughput_isl_list: lista dei throughput ISL (Gbps)
-        """
         plt.figure(figsize=(8, 6))
         plt.plot(lisl_range_list, throughput_downlink_list, marker='o', linestyle='-', color='green',
                  label='Throughput Downlink (Gbps)')
@@ -102,9 +88,10 @@ class PlotGenerator:
         plt.grid(True)
         plt.tight_layout()
         plt.show()
+    """
 
     def plot_latency_every_cities_vs_terrestrial(self, cities, rtt_list, rtt_terrestrial, plusGrid):
-        # Crea vettore delle posizioni per ogni città
+
         x = np.arange(len(cities))
         width = 0.35  # Larghezza delle colonne
 
@@ -116,27 +103,21 @@ class PlotGenerator:
         # RTT Satellitare (verde)
         plt.bar(x + width / 2, rtt_list, width=width, color='lightblue', label='RTT Satellitare')
 
-        # Personalizzazione etichette e titolo
-        plt.xlabel("Città")
-        plt.ylabel("RTT (ms)")
+
+        plt.xlabel("Città", fontsize=14)
+        plt.ylabel("RTT (ms)", fontsize=14)
         if plusGrid:
-            plt.title("(+Grid) RTT verso diverse città: Confronto Terrestre vs Satellitare")
+            plt.title("(+Grid) RTT verso diverse città: Confronto Terrestre vs Satellitare", fontsize=14)
         else:
-            plt.title("(NO +Grid) RTT verso diverse città: Confronto Terrestre vs Satellitare")
-        plt.xticks(x, cities, rotation=45)  # Nomi delle città inclinati per leggibilità
-        plt.legend()
+            plt.title("(Libera) RTT verso diverse città: Confronto Terrestre vs Satellitare", fontsize=14)
+        plt.xticks(x, cities, rotation=45, fontsize=16)  # Rotazione nomi delle città per leggibilità
+        plt.legend(fontsize=14)
         plt.grid(axis='y', linestyle='--', alpha=0.7)
         plt.tight_layout()  # Aggiusta automaticamente gli spazi
 
-        # Mostra il grafico
         plt.show()
 
     def plot_violin_distance_distribution(self, dh):
-        """
-        Crea due violin plot separati per la distribuzione delle distanze totali:
-        uno per Dijkstra e uno per MinHops, con il plot di MinHops colorato in magenta.
-        """
-        # Raccogli i dati per ogni algoritmo
         dijkstra_data = {}
         minhop_data = {}
 
@@ -157,6 +138,7 @@ class PlotGenerator:
 
         # --- Grafico Dijkstra ---
         dijkstra_values = [dijkstra_data[r] for r in sorted_ranges]
+        print(dijkstra_values)
         dijkstra_labels = [str(r) for r in sorted_ranges]
 
         plt.figure(figsize=(10, 5))
@@ -176,13 +158,12 @@ class PlotGenerator:
         plt.figure(figsize=(10, 5))
         parts = plt.violinplot(minhop_values, showmeans=False, showextrema=True, showmedians=True)
 
-        # Imposta il colore magenta per i corpi delle violin plot
         for pc in parts['bodies']:
             pc.set_facecolor('orange')
-            pc.set_alpha(0.5)  # Imposta la trasparenza se desiderato
+            pc.set_alpha(0.5)
 
         plt.xticks(range(1, len(minhop_labels) + 1), minhop_labels)
-        plt.title("Distribuzione Distanze Totali - MinHops")
+        plt.title("Distribuzione Distanze Totali - MinHop")
         plt.xlabel("Range del Laser (km)")
         plt.ylabel("Distanza Totale (km)")
         plt.grid(True)

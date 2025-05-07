@@ -1,14 +1,14 @@
-from skyfield.api import load, Topos
+from skyfield.api import load
 from datetime import timedelta
 import numpy as np  # Se lo sposti in utils.py, ricordati di importarlo anche qui se necessario
 
-from utils import haversine_with_altitude as haversine, euclidean_distance
+from utils import euclidean_distance
 from collections import defaultdict
 
 class SatelliteTracker:
 
     def __init__(self, city1, city2, start_time, E_to_W, tle_file="gp.php"):
-        # Carica i TLE (puoi usare anche l'URL se preferisci)
+        # Carica i TLE (se è da aggiornare usare l'URL - ricordarsi di cambiare la data di test)
         tle_url = "https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=tle"
         self.ts = load.timescale()
         self.satellites = load.tle_file(tle_file)
@@ -107,7 +107,7 @@ class SatelliteTracker:
     def find_satellite_more_close(self, city_lat, city_lon, satellites):
         """
         Trova il satellite la cui posizione media (calcolata dal track) è la più vicina
-        al punto (city_lat, city_lon). Usa la distanza euclidea 3D.
+        al punto (city_lat, city_lon)
         """
         min_distance = float('inf')
         node = None
