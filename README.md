@@ -38,18 +38,20 @@ Successivamente, misura la distanza totale di ogni percorso e la latenza, salvan
    ```bash
    git clone https://github.com/riccacio/SkyfieldProject.git
    cd SkyfieldProject
+   ```
 
 2. **Installa le dipendenze**
    ```bash
    pip install -r requirements.txt
-   
+   ```
+
 3. **Avvia il programma**
    ```bash
    python main.py
-   
-**Autore**   
-[![Author](https://img.shields.io/badge/Author-Riccardo%20Pacini-blue)](https://github.com/riccacio)
+    ```
 
-Sviluppato da **Riccardo Pacini**
-📧 Email: riccardopacini0711@gmail.com
-📅 Anno: 2025
+**Autore**
+
+[![Author](https://img.shields.io/badge/Author-Riccardo%20Pacini-blue)](https://github.com/riccacio)  
+Email: riccardopacini0711@gmail.com  
+Anno: 2025
