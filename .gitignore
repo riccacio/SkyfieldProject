@@ -1,0 +1,45 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+.venv/
+
+# PyCharm
+.idea/
+
+# VSCode
+.vscode/
+
+# macOS system files
+.DS_Store
+
+# Logs
+*.log
+
+# CSV and output files (opzionale: se vuoi ignorare anche gli output)
+# *.csv
+# output/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Python egg info
+*.egg-info/
+
+# Test and coverage reports
+htmlcov/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*.swo
