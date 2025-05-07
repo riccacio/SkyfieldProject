@@ -7,7 +7,7 @@ from collections import defaultdict
 
 class SatelliteTracker:
 
-    def __init__(self, city1, city2, start_time, E_to_W, tle_file="gp.php"):
+    def __init__(self, city1, city2, start_time, E_to_W, tle_file="gp.txt"):
         # Carica i TLE (se è da aggiornare usare l'URL - ricordarsi di cambiare la data di test)
         tle_url = "https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=tle"
         self.ts = load.timescale()
